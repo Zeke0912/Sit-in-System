@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 26, 2025 at 01:37 AM
+-- Generation Time: Mar 05, 2025 at 05:34 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -39,7 +39,8 @@ CREATE TABLE `announcements` (
 --
 
 INSERT INTO `announcements` (`id`, `title`, `content`, `date`) VALUES
-(1, 'SHEEESHSHH', 'SHEEEESH', '2025-02-25');
+(1, 'SHEEESHSHH', 'SHEEEESH', '2025-02-25'),
+(2, 'Lazaga bayot', 'BAYOT LOBOT', '2025-03-05');
 
 -- --------------------------------------------------------
 
@@ -118,8 +119,10 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`idno`, `lastname`, `firstname`, `middlename`, `course`, `year`, `email`, `username`, `password_hash`, `photo`, `role`, `remaining_hours`) VALUES
+('00000000', 'Lazaga', 'BAYOTTTT', 'shashdashdash', 'arts', '3', 'lazagalobot@gmail.com', 'sheesh', '$2y$10$zLjjg9hJbw2MfCE59DfKEOcRKkxX7GtlYXm1jmltDAW3ongDW1tl.', 'uploads/1741148257_diwata.jpg', 'student', 120),
+('09090', 'last', 'firstt', 'middle', 'computer_science', '1', 'last@gmail.com', 'test1', '$2y$10$TOmTj5TeU5VKnhPgY2q7KOEvO8zQBohnvbbHurfXI6O9fkmqhEBeK', 'uploads/1741177218_diwata.jpg', 'student', 120),
 ('0912', 'Sheeeshs', 'SHOOOSh', 'SHAASHSHH', 'BSECE', '4', 'sheeeesh@gmail.com', 'mrpopoman12', '$2y$10$SIlY/Xv.1sV0EkMw84HTJOtfN8epf0WdA8L16q8/zf5Ee0xJVeHN6', 'uploads/1740059861_3.jpg', 'student', 120),
-('9090909090', 'Alonso LABLAB', 'Zeke LABLAB', 'Debulosan', 'BSCS', '4', 'zekealonsoLABLAB@gmail.com', 'zeke', '$2y$10$w0d2vP5y.sVM0v3xgS5a7eztwWA/ys6x7B941r3r6Suli6V377IWW', 'uploads/1740067804_zeke.jpg', 'student', 120),
+('9090909090', 'Alonso', 'Zeke', 'Debulosan', 'business', '1', 'zekealonso20@gmail.com', 'zekelablab', '$2y$10$mW0UcW2Nbf6nXV8Njlvb9Og4tUm9PxMOYNJ/EDsZ8GmEESDz5t8dW', 'uploads/1740067804_zeke.jpg', 'student', 120),
 ('9099090', 'Lazaga', 'Prince', 'sdfjhsjfh', 'BSIT', '4', 'lazagabayot@gmail.com', 'student1', '$2y$10$BImTZH9ud0W0Zin1Cs0Sce/V.ffzve4CizHTKpWSN4YmTKTWMYWJ2', 'uploads/1739462573_diwata.jpg', 'student', 120),
 ('admin_id', 'Admin', 'Admin', '', '', '', 'admin@example.com', 'admin', '$2y$10$lbf9rFCc2cXrWSyrxf1c.egIiuxLC80f.rzY1ymiDraabglVvR/yK', 'default.png', 'admin', 120);
 
@@ -162,7 +165,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `announcements`
 --
 ALTER TABLE `announcements`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `sit_in_requests`
