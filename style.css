@@ -1,0 +1,434 @@
+/* ----- Global Reset ----- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* General Styling */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+
+/* Navbar */
+nav {
+    background: #2C3E50;
+    width: 100%;
+    padding: 12px 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    text-align: center;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+}
+
+nav ul li {
+    margin: 0 15px;
+}
+
+nav ul li a {
+    text-decoration: none;
+    color: white;
+    font-size: 16px;
+    padding: 10px 15px;
+    transition: 0.3s;
+}
+
+nav ul li a:hover {
+    background: #1ABC9C;
+    border-radius: 5px;
+}
+
+.logout-container {
+    margin-right: 20px;
+}
+
+.logout-container a {
+    text-decoration: none;
+    color: white;
+    font-size: 16px;
+    padding: 10px 15px;
+    background: #e74c3c;
+    border-radius: 5px;
+    transition: 0.3s;
+}
+
+.logout-container a:hover {
+    background: #c0392b;
+}
+
+/* ----- Body Styling ----- */
+body {
+    background: url('ucmain.jpg') no-repeat center center fixed;
+    background-size: cover;
+    color: white;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+/* Page Layout */
+.container {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    padding-top: 80px;
+    width: 90%;
+    max-width: 1200px;
+    margin: auto;
+    gap: 20px;
+}
+
+/* Profile Section */
+.profile-container {
+    width: 300px;
+    background: linear-gradient(to bottom right, #ffffff, #f0f0f0);
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    position: sticky;
+    top: 100px;
+    font-family: 'Arial', sans-serif;
+    transition: 0.3s;
+}
+
+.profile-container:hover {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.profile-container img {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid #3498db;
+    margin-bottom: 15px;
+    transition: 0.3s;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+}
+
+.profile-container img:hover {
+    border-color: #2ecc71;
+    filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.3));
+}
+
+.profile-container h3 {
+    margin: 0;
+    font-size: 22px;
+    color: #2c3e50;
+    font-weight: bold;
+}
+
+.profile-container .profile-info {
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+.profile-container p {
+    margin: 8px 0;
+    color: #7f8c8d;
+}
+
+.profile-container .edit-profile-container {
+    margin-top: 30px;
+}
+
+.profile-container a {
+    display: block;
+    text-decoration: none;
+    background: linear-gradient(to right, #3498db, #1abc9c);
+    color: white;
+    padding: 12px 18px;
+    border-radius: 8px;
+    transition: 0.3s;
+    font-weight: bold;
+}
+
+.profile-container a:hover {
+    background: linear-gradient(to right, #1abc9c, #3498db);
+    transform: scale(1.05);
+}
+
+/* Main Dashboard Content */
+.dashboard-content {
+    flex-grow: 1;
+}
+
+/* Rules & Regulations - Clickable */
+.rules-container {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(250, 247, 247, 0.1);
+    margin-bottom: 20px;
+}
+
+.rules-header {
+    background: #2980B9;
+    color: white;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.rules-content {
+    display: none; /* Hide initially */
+    padding-top: 15px;
+}
+
+.rules-content ul {
+    padding-left: 20px;
+}
+
+.rules-content li {
+    font-size: 16px;
+    color: #333;
+    padding: 5px 0;
+}
+
+/* Announcements */
+.announcements-section {
+    background: #fff5e6;
+    border-left: 5px solid #e67e22;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.announcements-section h2 {
+    color: #D35400;
+}
+
+.announcements-section marquee {
+    font-weight: bold;
+    font-size: 16px;
+    color: #D35400;
+}
+
+/* ----- Login Page ----- */
+.login-page {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ----- Form Container ----- */
+.form-container {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    color: white;
+    width: 350px;
+}
+
+/* ----- Input Fields ----- */
+input[type="text"], 
+input[type="password"], 
+input[type="email"] {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+}
+
+/* ----- Buttons ----- */
+button {
+    width: 100%;
+    padding: 10px;
+    background: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #0056b3;
+}
+
+/* ----- Register Button ----- */
+.btn-register {
+    display: block;
+    text-align: center;
+    margin-top: 15px;
+    color: white;
+    text-decoration: none;
+}
+
+.btn-register:hover {
+    text-decoration: underline;
+}
+
+/* ----- Navigation Bar ----- */
+.header {
+    width: 100%;
+    padding: 15px 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 5%;
+    position: fixed;
+    top: 0;
+}
+
+.header a {
+    color: white;
+    text-decoration: none;
+    margin: 0 15px;
+    font-weight: bold;
+    transition: color 0.3s;
+}
+
+.header a:hover {
+    color: #ffcc00;
+}
+
+/* ----- Dashboard Container ----- */
+.dashboard {
+    margin-top: 100px;
+    padding: 30px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    box-shadow: 0px 4px 10px rgba(255, 255, 255, 0.2);
+    width: 80%;
+    max-width: 600px;
+    text-align: center;
+}
+
+.dashboard h1 {
+    font-size: 28px;
+    margin-bottom: 10px;
+}
+
+/* ----- User Info Box ----- */
+.user-info-container {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(15px);
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.user-info p {
+    font-size: 18px;
+    margin: 8px 0;
+}
+
+/* ----- Edit Profile Form ----- */
+.edit-profile-container {
+    background: rgba(0, 0, 0, 0.7); /* Semi-transparent black */
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+    max-width: 500px;
+    margin: auto;
+    color: white; /* Make text white for better visibility */
+}
+
+
+.edit-profile-container h2 {
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+.edit-profile-container input {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.edit-profile-container button {
+    background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+    border: none;
+    padding: 12px;
+    width: 100%;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    transition: transform 0.2s, box-shadow 0.3s;
+}
+
+.edit-profile-container button:hover {
+    transform: scale(1.05);
+    box-shadow: 0px 4px 10px rgba(255, 255, 255, 0.3);
+}
+
+/* Force dropdowns to match text input fields */
+.input-field, select {
+    width: 100% !important;  /* Ensures full width */
+    height: 50px !important; /* Ensures same height as inputs */
+    padding: 10px !important; /* Keeps padding consistent */
+    font-size: 18px !important; /* Match input text size */
+    border: 2px solid #ccc !important;
+    border-radius: 5px !important;
+    background-color: white !important;
+    color: black !important;
+}
+
+/* Ensure labels appear above dropdowns */
+label {
+    font-size: 18px;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+    color: white;
+}
+
+/* ----- Logout Button ----- */
+.logout-btn {
+    background: red;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 16px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.3s;
+}
+
+.logout-btn:hover {
+    background: darkred;
+    transform: scale(1.05);
+}
+
+/* ----- Responsive Design ----- */
+@media (max-width: 768px) {
+    .dashboard, .user-info-container, .edit-profile-container {
+        width: 90%;
+    }
+}
