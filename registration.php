@@ -32,6 +32,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["create"])) {
         $target_file = "uploads/default.png"; // Default profile picture
     }
 
+    // Set role as 'student' by default (You can later add logic for admin creation if needed)
+    $role = 'student'; // Default role for the user is 'student'
+
     // Database Connection
     $servername = "localhost";
     $dbusername = "root";
@@ -43,11 +46,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["create"])) {
         die("Connection failed: " . $conn->connect_error);
     }
 
-    // Insert user data into database
-    $sql = "INSERT INTO users (idno, lastname, firstname, middlename, course, year, email, username, password_hash, photo) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    // Insert user data into database, including role
+    $sql = "INSERT INTO users (idno, lastname, firstname, middlename, course, year, email, username, password_hash, photo, role) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssssssssss", $idno, $lastname, $firstname, $middlename, $course, $year, $email, $username, $password_hash, $target_file);
+    $stmt->bind_param("sssssssssss", $idno, $lastname, $firstname, $middlename, $course, $year, $email, $username, $password_hash, $target_file, $role);
 
     if ($stmt->execute()) {
         echo "<script>alert('User Created Successfully'); window.location.href = 'index.php';</script>";

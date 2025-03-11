@@ -1,5 +1,8 @@
 <?php
-session_start(); // Start session
+// Start the session only if it's not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start(); // Start session only once
+}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["login"])) {
     $username = $_POST["username"];
@@ -20,41 +23,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["login"])) {
     // Check if user exists
     $sql = "SELECT * FROM users WHERE username = ?";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $username);
+    $stmt->bind_param("s", $username); // Binding the username safely
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($result->num_rows > 0) {
         $row = $result->fetch_assoc();
         
-        // Debugging statements
-        echo "Username: " . $row['username'] . "<br>";
-        echo "Role: " . $row['role'] . "<br>";
-        echo "Password Hash: " . $row['password_hash'] . "<br>";
-
-        // ✅ Make sure passwords are hashed in the database!
+        // Verify password using password_verify (bcrypt)
         if (password_verify($password, $row['password_hash'])) {  
-            $_SESSION['user_id'] = $row['idno']; // Store user ID
+            $_SESSION['user_id'] = $row['idno']; // Store user ID in session
             $_SESSION['username'] = $row['username']; 
-            $_SESSION['role'] = $row['role']; // Store role
+            $_SESSION['role'] = $row['role']; // Store user role
 
-            // ✅ Redirect based on role (admin or student)
+            // Redirect based on user role (admin or student)
             if ($row['role'] === 'admin') {
                 $_SESSION['admin_id'] = $row['idno'];
                 $_SESSION['admin_name'] = $row['username'];
-                header("Location: admin_dashboard.php");
+                header("Location: admin_dashboard.php"); // Admin dashboard
+                exit(); // Ensure no further code is executed
             } else {
-                echo "Redirecting to home.php<br>";
-                header("Location: home.php");
+                header("Location: home.php"); // Student dashboard
+                exit(); // Ensure no further code is executed
             }
-            exit();
         } else {
             $error_message = "❌ Incorrect username or password!";
-            echo $error_message . "<br>";
         }
     } else {
         $error_message = "❌ No user found with that username!";
-        echo $error_message . "<br>";
     }
 
     $stmt->close();

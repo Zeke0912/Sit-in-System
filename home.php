@@ -124,23 +124,49 @@ $profile_photo = $user['photo'] ?? "uploads/default.png";
 <!-- ✅ Page Content Layout -->
 <div class="container">
 
-  <!-- ✅ User Profile Section -->
+ <!-- ✅ User Profile Section -->
 <div class="profile-container">
     <img src="<?= htmlspecialchars($profile_photo) ?>" alt="Profile Picture">
     <h3><?= htmlspecialchars($user['username'] ?? 'N/A') ?></h3>
+    
     <div class="profile-info">
-        <p><strong>ID Number:</strong> <?= htmlspecialchars($user['idno'] ?? 'N/A') ?></p>
-        <p><strong>First Name:</strong> <?= htmlspecialchars($user['firstname'] ?? 'N/A') ?></p>
-        <p><strong>Last Name:</strong> <?= htmlspecialchars($user['lastname'] ?? 'N/A') ?></p>
-        <p><strong>Email:</strong> <?= htmlspecialchars($user['email'] ?? 'N/A') ?></p>
-        <p><strong>Course:</strong> <?= htmlspecialchars($user['course'] ?? 'Not specified') ?></p>
-        <p><strong>Year Level:</strong> <?= htmlspecialchars($user['year'] ?? 'N/A') ?></p>
-        <p><strong>Remaining Sessions:</strong> <?= $remaining_sessions ?></p>
+        <div class="info-row">
+            <strong>ID Number:</strong>
+            <span><?= htmlspecialchars($user['idno'] ?? 'N/A') ?></span>
+        </div>
+        <div class="info-row">
+            <strong>First Name:</strong>
+            <span><?= htmlspecialchars($user['firstname'] ?? 'N/A') ?></span>
+        </div>
+        <div class="info-row">
+            <strong>Last Name:</strong>
+            <span><?= htmlspecialchars($user['lastname'] ?? 'N/A') ?></span>
+        </div>
+        <div class="info-row">
+            <strong>Email:</strong>
+            <span><?= htmlspecialchars($user['email'] ?? 'N/A') ?></span>
+        </div>
+        <div class="info-row">
+            <strong>Course:</strong>
+            <span><?= htmlspecialchars($user['course'] ?? 'Not specified') ?></span>
+        </div>
+        <div class="info-row">
+            <strong>Year Level:</strong>
+            <span><?= htmlspecialchars($user['year'] ?? 'N/A') ?></span>
+        </div>
+        <div class="info-row">
+            <strong>Remaining Sessions:</strong>
+            <span><?= $remaining_sessions ?></span>
+        </div>
     </div>
+    
     <div class="edit-profile-container">
         <a href="edit_profile.php">Edit Profile</a>
     </div>
 </div>
+
+
+
 
     <!-- ✅ Main Dashboard Content -->
     <div class="dashboard-content">

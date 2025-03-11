@@ -335,5 +335,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <button type="submit">Update Profile</button>
         </form>
     </div>
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"], select');
+        
+        // Store the original value of the inputs to revert back if nothing was changed
+        const originalValues = {};
+
+        inputs.forEach(input => {
+            originalValues[input.name] = input.value; // Save the original value of each input
+
+            input.addEventListener('click', function() {
+                // Only clear the field if it's not already cleared
+                if (this.value === originalValues[this.name]) {
+                    this.value = ''; // Clear the field when clicked
+                }
+            });
+
+            // When the input loses focus (blur), we check if the user has changed the value
+            input.addEventListener('blur', function() {
+                // If the user hasn't typed anything, revert the value back to the original
+                if (!this.value) {
+                    this.value = originalValues[this.name]; // Revert to the original value
+                }
+            });
+        });
+    });
+</script>
+
+
 </body>
 </html>

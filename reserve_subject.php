@@ -1,55 +1,46 @@
 <?php
 session_start();
-$conn = new mysqli("localhost", "root", "", "my_database");
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
 
-if (!isset($_SESSION['username'])) {
-    header("Location: index.php");
+// Check if the user is logged in
+if (!isset($_SESSION['user_id'])) {
+    echo "Please log in to reserve a subject.";
     exit();
 }
 
-$username = $_SESSION['username'];
-$subject_id = $_GET['subject_id'];
+// Check if the subject ID is passed in the request
+if (isset($_POST['subject_id'])) {
+    $subject_id = $_POST['subject_id'];
+    $student_id = $_SESSION['user_id']; // Assuming the user's ID is stored in session
 
-// Get the student ID and course
-$sql = "SELECT idno, course FROM users WHERE username = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $username);
-$stmt->execute();
-$stmt->bind_result($student_id, $course);
-$stmt->fetch();
-$stmt->close();
+    // Database connection
+    $servername = "localhost";
+    $username = "root"; // Replace with your database username
+    $password = "";     // Replace with your database password
+    $dbname = "my_database"; // Replace with your database name
 
-// Check the total approved sessions for the student
-$sql = "SELECT COUNT(*) FROM sit_in_requests WHERE student_id = ? AND status = 'approved'";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $student_id);
-$stmt->execute();
-$stmt->bind_result($approved_sessions);
-$stmt->fetch();
-$stmt->close();
+    // Create connection
+    $conn = new mysqli($servername, $username, $password, $dbname);
 
-// Determine the maximum sessions based on the course
-$max_sessions = ($course == 'BSIT' || $course == 'BSCS') ? 30 : 15;
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
 
-if ($approved_sessions >= $max_sessions) {
-    echo "<script>alert('You have reached the maximum number of sit-in sessions.'); window.location.href = 'home.php';</script>";
-} else {
-    // Insert the sit-in request
-    $sql = "INSERT INTO sit_in_requests (student_id, subject_id, status) VALUES (?, ?, 'pending')";
+    // Insert reservation into the reservations table with 'pending' status
+    $sql = "INSERT INTO sit_in_requests (student_id, subject_id, status, feedback) VALUES (?, ?, 'pending', NULL)";
+
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("si", $student_id, $subject_id);
+    $stmt->bind_param("ii", $student_id, $subject_id);
 
     if ($stmt->execute()) {
-        echo "<script>alert('Sit-in request submitted successfully.'); window.location.href = 'home.php';</script>";
+        echo "success";
     } else {
         echo "Error: " . $stmt->error;
     }
 
+    // Close the database connection
     $stmt->close();
+    $conn->close();
+} else {
+    echo "Subject ID not provided.";
 }
-
-$conn->close();
 ?>
