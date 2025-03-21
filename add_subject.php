@@ -11,7 +11,7 @@ $username = "root";
 $password = "";
 $dbname = "my_database";  // Replace with your database name
 
-// Step 2: Create connection to database
+// Step 2: Create connection to the database
 $conn = new mysqli($servername, $username, $password, $dbname);
 
 // Step 3: Check if the form is submitted
@@ -23,12 +23,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $end_time = $_POST['end_time'];
     $sessions = $_POST['sessions'];
 
-    // Step 4: Insert data into the subjects table
-    $sql = "INSERT INTO subjects (subject_name, lab_number, date, start_time, end_time, sessions)
-            VALUES ('$subject_name', '$lab_number', '$date', '$start_time', '$end_time', '$sessions')";
+    // Step 4: Insert data into the subjects table, with default status as 'available'
+    $sql = "INSERT INTO subjects (subject_name, lab_number, date, start_time, end_time, sessions, status)
+            VALUES ('$subject_name', '$lab_number', '$date', '$start_time', '$end_time', '$sessions', 'available')";
     
     if ($conn->query($sql) === TRUE) {
-        echo "New subject added successfully!";
+        echo "New subject added successfully with status 'available'!";
     } else {
         echo "Error: " . $sql . "<br>" . $conn->error;
     }

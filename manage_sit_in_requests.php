@@ -33,25 +33,27 @@ if ($result === false) {
 }
 
 // Step 2: Process approval/rejection actions
-if (isset($_POST['action'])) {
+if (isset($_POST['action']) && isset($_POST['request_id'])) {
     $request_id = $_POST['request_id'];
     $action = $_POST['action'];
 
     if ($action == 'approve') {
+        // Update the status to 'approved'
         $update_sql = "UPDATE sit_in_requests SET status = 'approved' WHERE id = ?";
     } elseif ($action == 'reject') {
+        // Update the status to 'rejected'
         $update_sql = "UPDATE sit_in_requests SET status = 'rejected' WHERE id = ?";
     }
 
     // Prepare and execute the update query
     if ($stmt = $conn->prepare($update_sql)) {
-        $stmt->bind_param("i", $request_id);  // 'i' is for integer type
+        $stmt->bind_param("i", $request_id);  // 'i' for integer type
         $stmt->execute();
         $stmt->close();
     }
     
     // Redirect back to this page after performing the action
-    header("Location: manage_sit_in_requests.php");
+    header("Location: manage_sit_in_requests.php");  // Refresh the page to show updated status
     exit();
 }
 
@@ -208,9 +210,7 @@ $conn->close();
             <a href="manage_sit_in_requests.php">Manage Sit-in Requests</a>
             <a href="approved_sit_in_sessions.php">Approved Sit-in Sessions</a>
             <a href="add_subject.php">Add Subject</a>
-            <a href="manage_subjects.php">Manage Subjects</a>
             <a href="add_announcement.php">Add Announcement</a>
-            <a href="announcements.php">Announcements</a>
         </div>
         <div class="logout-container">
             <a href="logout.php">Logout</a>
@@ -246,14 +246,15 @@ $conn->close();
                         <td><?php echo htmlspecialchars($row['status']); ?></td>
                         <td>
                             <!-- Buttons for Approve and Reject -->
-                            <form method="POST" style="display:inline-block;">
-                                <input type="hidden" name="request_id" value="<?php echo $row['id']; ?>">
-                                <button type="submit" name="action" value="approve" class="approve-btn">Approve</button>
-                            </form>
-                            <form method="POST" style="display:inline-block;">
-                                <input type="hidden" name="request_id" value="<?php echo $row['id']; ?>">
-                                <button type="submit" name="action" value="reject" class="reject-btn">Reject</button>
-                            </form>
+                            <form method="POST" action="manage_sit_in_requests.php" style="display:inline-block;">
+    <input type="hidden" name="request_id" value="<?php echo $row['id']; ?>">
+    <button type="submit" name="action" value="approve">Approve</button>
+</form>
+
+<form method="POST" action="manage_sit_in_requests.php" style="display:inline-block;">
+    <input type="hidden" name="request_id" value="<?php echo $row['id']; ?>">
+    <button type="submit" name="action" value="reject">Reject</button>
+</form>
                         </td>
                     </tr>
                 <?php endwhile; ?>
