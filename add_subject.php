@@ -16,7 +16,6 @@ $conn = new mysqli($servername, $username, $password, $dbname);
 
 // Step 3: Check if the form is submitted
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $subject_name = $_POST['subject_name'];
     $lab_number = $_POST['lab_number'];
     $date = $_POST['date'];
     $start_time = $_POST['start_time'];
@@ -24,8 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $sessions = $_POST['sessions'];
 
     // Step 4: Insert data into the subjects table, with default status as 'available'
-    $sql = "INSERT INTO subjects (subject_name, lab_number, date, start_time, end_time, sessions, status)
-            VALUES ('$subject_name', '$lab_number', '$date', '$start_time', '$end_time', '$sessions', 'available')";
+    $sql = "INSERT INTO subjects (lab_number, date, start_time, end_time, sessions, status)
+            VALUES ('$lab_number', '$date', '$start_time', '$end_time', '$sessions', 'available')";
     
     if ($conn->query($sql) === TRUE) {
         echo "New subject added successfully with status 'available'!";
@@ -52,9 +51,6 @@ $conn->close();
         <h2>Add a New Subject</h2>
 
         <form method="POST" action="add_subject.php">
-            <label for="subject_name">Subject Name</label>
-            <input type="text" id="subject_name" name="subject_name" required>
-
             <label for="lab_number">Lab Number</label>
             <input type="text" id="lab_number" name="lab_number" required>
 

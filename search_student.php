@@ -22,7 +22,7 @@ if (isset($_POST['studentId']) && !empty($_POST['studentId'])) {
     $studentId = $_POST['studentId'];
     
     // Prepare SQL statement to prevent SQL injection
-    $stmt = $conn->prepare("SELECT idno, lastname, firstname, middlename, course, year, email, photo, remaining_hours FROM users WHERE idno = ? AND role = 'student'");
+    $stmt = $conn->prepare("SELECT idno, lastname, firstname, middlename, course, year, email, photo, remaining_sessions FROM users WHERE idno = ? AND role = 'student'");
     $stmt->bind_param("i", $studentId);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -52,7 +52,7 @@ if (isset($_POST['studentId']) && !empty($_POST['studentId'])) {
         echo '<p><strong>Course:</strong> ' . $student['course'] . '</p>';
         echo '<p><strong>Year:</strong> ' . $student['year'] . '</p>';
         echo '<p><strong>Email:</strong> ' . $student['email'] . '</p>';
-        echo '<p><strong>Remaining Hours:</strong> ' . $student['remaining_hours'] . '</p>';
+        echo '<p><strong>Remaining Sessions:</strong> ' . $student['remaining_sessions'] . '</p>';
         echo '</div>';
         echo '</div>';
         
