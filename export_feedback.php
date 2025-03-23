@@ -26,13 +26,13 @@ $searchCondition = '';
 if (!empty($search)) {
     $searchCondition = " AND (u.firstname LIKE '%$search%' OR 
                              u.lastname LIKE '%$search%' OR 
-                             r.purpose LIKE '%$search%' OR 
+                             r.feedback LIKE '%$search%' OR 
                              u.idno LIKE '%$search%' OR
                              s.lab_number LIKE '%$search%')";
 }
 
 // Fetch all feedback data
-$sql = "SELECT r.id, r.student_id, r.purpose as message, r.end_time as date,
+$sql = "SELECT r.id, r.student_id, r.feedback as message, r.end_time as date,
         u.firstname, u.lastname, u.course, u.year,
         s.subject_name, s.lab_number
         FROM sit_in_requests r

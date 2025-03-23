@@ -28,7 +28,7 @@ $searchCondition = '';
 if (!empty($search)) {
     $searchCondition = " AND (u.firstname LIKE '%$search%' OR 
                               u.lastname LIKE '%$search%' OR 
-                              r.purpose LIKE '%$search%' OR 
+                              r.feedback LIKE '%$search%' OR 
                               u.idno LIKE '%$search%' OR
                               s.lab_number LIKE '%$search%')";
 }
