@@ -33,7 +33,7 @@ if (isset($_POST['studentId']) && !empty($_POST['studentId'])) {
         
         // Get sit-in request history
         $requestStmt = $conn->prepare("
-            SELECT sir.id, sir.status, sir.feedback, s.subject_name, s.lab_number, s.date, s.start_time, s.end_time 
+            SELECT sir.id, sir.status, sir.feedback, sir.purpose, s.lab_number, s.date, s.start_time, s.end_time 
             FROM sit_in_requests sir
             LEFT JOIN subjects s ON sir.subject_id = s.id
             WHERE sir.student_id = ?
@@ -63,7 +63,7 @@ if (isset($_POST['studentId']) && !empty($_POST['studentId'])) {
             echo '<table class="history-table">';
             echo '<thead>';
             echo '<tr>';
-            echo '<th>Subject</th>';
+            echo '<th>Purpose</th>';
             echo '<th>Lab</th>';
             echo '<th>Date</th>';
             echo '<th>Time</th>';
@@ -75,7 +75,7 @@ if (isset($_POST['studentId']) && !empty($_POST['studentId'])) {
             
             while ($request = $requestResult->fetch_assoc()) {
                 echo '<tr>';
-                echo '<td>' . $request['subject_name'] . '</td>';
+                echo '<td>' . $request['purpose'] . '</td>';
                 echo '<td>' . $request['lab_number'] . '</td>';
                 echo '<td>' . $request['date'] . '</td>';
                 echo '<td>' . $request['start_time'] . ' - ' . $request['end_time'] . '</td>';

@@ -77,9 +77,9 @@ if (!isset($_SESSION["admin_id"])) {
 
         /* Main Content */
         .content {
-            margin-top: 100px; /* Account for the height of the navbar */
+            margin-top: 120px; /* Increased from 100px to prevent overlap */
             padding: 30px;
-            margin: 30px auto;
+            margin: 120px auto 30px; /* Adjusted top margin */
             width: 85%;
             text-align: center;
         }
@@ -115,16 +115,34 @@ if (!isset($_SESSION["admin_id"])) {
             .navbar {
                 flex-direction: column;
                 align-items: center;
+                padding: 10px 0;
             }
 
             .content {
-                margin-top: 130px;
+                margin-top: 200px; /* Increased to account for multi-line nav */
                 width: 100%;
             }
 
             .navbar .nav-links {
-                flex-direction: column;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 5px;
+                margin: 10px 0;
+            }
+            
+            .navbar a {
+                font-size: 14px;
+                padding: 8px 10px;
+            }
+            
+            .charts-container {
                 gap: 10px;
+            }
+            
+            .chart-container {
+                width: 100%;
+                max-width: 300px;
             }
         }
 
@@ -423,8 +441,8 @@ if (!isset($_SESSION["admin_id"])) {
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             padding: 15px;
-            width: 250px;
-            height: 250px;
+            width: 300px; /* Increased from 250px */
+            height: 300px; /* Increased from 250px */
             position: relative;
         }
         

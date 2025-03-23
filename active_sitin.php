@@ -334,7 +334,7 @@ if (isset($_POST['end_session']) && isset($_POST['request_id'])) {
                     <td>' . date('M d, Y g:i A', strtotime($row['start_time'])) . '</td>
                     <td>' . $row['remaining_sessions'] . '</td>
                     <td>
-                        <form method="post" onsubmit="return confirm(\'Are you sure you want to end this session? This will decrease the student\\\'s remaining sessions by 1.\');">
+                        <form method="post" onsubmit="return confirm(\'Are you sure you want to end this session?\');">
                             <input type="hidden" name="request_id" value="' . $row['id'] . '">
                             <button type="submit" name="end_session" class="end-btn">End Session</button>
                         </form>

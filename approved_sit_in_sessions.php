@@ -137,7 +137,7 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
 
         /* Top Navbar */
         .navbar {
-            padding: 15px;
+            padding: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -423,11 +423,10 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
     <div class="navbar">
         <div class="nav-links">
             <a href="admin_dashboard.php">Dashboard</a>
-            <a href="manage_sit_in_requests.php">Manage Sit-in Requests</a>
             <a href="approved_sit_in_sessions.php">Sit in Records</a>
             <a href="active_sitin.php">Active Sit-ins</a>
-            <a href="add_subject.php">Add Subject</a>
-            <a href="announcements.php">Announcements</a>
+            <a href="reports.php">Sit-in Reports</a>
+            <a href="feedback_reports.php">Feedback Reports</a>
         </div>
         <div class="logout-container">
             <a href="logout.php">Logout</a>
