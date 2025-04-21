@@ -16,6 +16,50 @@ if (!isset($_SESSION["admin_id"])) {
     header("Location: index.php");
     exit();
 }
+
+// Get most active sit-in participants
+$mostActiveSql = "SELECT 
+                    u.idno, 
+                    u.firstname, 
+                    u.lastname, 
+                    u.course, 
+                    COUNT(r.id) as session_count 
+                  FROM sit_in_requests r
+                  JOIN users u ON r.student_id = u.idno
+                  GROUP BY r.student_id
+                  ORDER BY session_count DESC
+                  LIMIT 5";
+$mostActiveResult = $conn->query($mostActiveSql);
+$activeParticipants = [];
+
+if ($mostActiveResult && $mostActiveResult->num_rows > 0) {
+    while ($row = $mostActiveResult->fetch_assoc()) {
+        $activeParticipants[] = $row;
+    }
+}
+
+// Get top performing sit-in participants (using time spent as a proxy for performance)
+$topPerformersSql = "SELECT 
+                      u.idno, 
+                      u.firstname, 
+                      u.lastname, 
+                      u.course, 
+                      SUM(TIMESTAMPDIFF(MINUTE, r.start_time, r.end_time)) as total_minutes,
+                      ROUND(SUM(TIMESTAMPDIFF(MINUTE, r.start_time, r.end_time))/60, 1) as total_hours
+                    FROM sit_in_requests r
+                    JOIN users u ON r.student_id = u.idno
+                    WHERE r.end_time IS NOT NULL
+                    GROUP BY r.student_id
+                    ORDER BY total_minutes DESC
+                    LIMIT 5";
+$topPerformersResult = $conn->query($topPerformersSql);
+$topPerformers = [];
+
+if ($topPerformersResult && $topPerformersResult->num_rows > 0) {
+    while ($row = $topPerformersResult->fetch_assoc()) {
+        $topPerformers[] = $row;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -39,49 +83,127 @@ if (!isset($_SESSION["admin_id"])) {
             background-color: #f8f9fa;
             color: #333;
             position: relative;
-        }
-
-        /* Top Navbar */
-        .navbar {
-            padding: 15px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 1000;  /* Ensure navbar stays on top */
-            background-color: #2c3e50;
-            box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
         }
 
-        .navbar a {
+        /* Left Sidebar Navigation */
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background-color: #2c3e50;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding: 20px 0;
+            color: #ecf0f1;
+            box-shadow: 3px 0 10px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar-header {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .sidebar-header h3 {
+            color: #ecf0f1;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-header p {
+            color: #bdc3c7;
+            font-size: 12px;
+        }
+        
+        .nav-links {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        
+        .nav-links a {
             color: #ecf0f1;
             text-decoration: none;
-            font-size: 16px;
-            padding: 10px;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-        }
-
-        .navbar a:hover {
-            background-color: #1abc9c;  /* New hover color */
-            color: white;
-        }
-
-        .navbar .nav-links {
+            padding: 12px 20px;
+            transition: background-color 0.3s, border-left 0.3s;
+            border-left: 3px solid transparent;
+            font-size: 14px;
             display: flex;
-            gap: 20px;
+            align-items: center;
+        }
+        
+        .nav-links a:hover, .nav-links a.active {
+            background-color: rgba(26, 188, 156, 0.2);
+            border-left: 3px solid #1abc9c;
+        }
+        
+        .nav-links a i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .logout-container {
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .logout-container a {
+            display: block;
+            padding: 10px;
+            background-color: #e74c3c;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            text-align: center;
+            transition: background-color 0.3s;
+        }
+
+        .logout-container a:hover {
+            background-color: #c0392b;
+        }
+        
+        /* Toggle button for mobile */
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 5px;
+            z-index: 1001;
+            cursor: pointer;
+            font-size: 20px;
         }
 
         /* Main Content */
-        .content {
-            margin-top: 120px; /* Increased from 100px to prevent overlap */
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
             padding: 30px;
-            margin: 120px auto 30px; /* Adjusted top margin */
-            width: 85%;
+            width: calc(100% - 250px);
+            transition: margin-left 0.3s, width 0.3s;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .content {
+            width: 100%;
             text-align: center;
+            flex: 1;
+            padding-bottom: 20px;
         }
 
         h1 {
@@ -90,59 +212,54 @@ if (!isset($_SESSION["admin_id"])) {
             margin-bottom: 10px;
         }
 
-        /* Logout Button */
-        .logout-container a {
-            color: white;
-            background-color: #e74c3c;
-            padding: 10px 20px;
-            border-radius: 5px;
-            text-decoration: none;
-        }
-
-        .logout-container a:hover {
-            background-color: #c0392b;
-        }
-
         footer {
             text-align: center;
             padding: 15px;
             background-color: #2c3e50;
             color: white;
             margin-top: 30px;
+            width: 100%;
         }
-
-        @media (max-width: 768px) {
-            .navbar {
-                flex-direction: column;
-                align-items: center;
-                padding: 10px 0;
+        
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-250px);
+                transition: transform 0.3s ease;
             }
-
-            .content {
-                margin-top: 200px; /* Increased to account for multi-line nav */
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .sidebar-toggle {
+                display: block;
+            }
+            
+            .main-content {
+                margin-left: 0;
                 width: 100%;
             }
-
-            .navbar .nav-links {
-                flex-direction: row;
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: 5px;
-                margin: 10px 0;
+            
+            body.sidebar-active .main-content {
+                margin-left: 250px;
+                width: calc(100% - 250px);
             }
             
-            .navbar a {
-                font-size: 14px;
-                padding: 8px 10px;
+            body.sidebar-active .sidebar-toggle {
+                left: 265px;
             }
-            
-            .charts-container {
-                gap: 10px;
-            }
-            
+        }
+        
+        @media (max-width: 768px) {
             .chart-container {
                 width: 100%;
                 max-width: 300px;
+            }
+            
+            body.sidebar-active .main-content {
+                margin-left: 0;
+                width: 100%;
             }
         }
 
@@ -462,22 +579,218 @@ if (!isset($_SESSION["admin_id"])) {
     </style>
 </head>
 <body>
+    <!-- Mobile Sidebar Toggle Button -->
+    <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+    </button>
 
-    <!-- Top Navbar -->
-    <div class="navbar">
+    <!-- Left Sidebar Navigation -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3>Sit-in Monitoring</h3>
+            <p>Admin Panel</p>
+        </div>
         <div class="nav-links">
-            <a href="admin_dashboard.php">Dashboard</a>
-            <a href="manage_sit_in_requests.php">Manage Sit-in Requests</a>
-            <a href="approved_sit_in_sessions.php">Sit in Records</a>
-            <a href="active_sitin.php">Active Sit-ins</a>
-            <a href="add_subject.php">Add Subject</a>
-            <a href="announcements.php">Announcements</a>
-            <a href="#" id="searchBtn">Search</a>
-            <a href="#" id="sitInBtn">Sit-in</a>
+            <a href="admin_dashboard.php" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="manage_sit_in_requests.php"><i class="fas fa-tasks"></i> Manage Requests</a>
+            <a href="todays_sit_in_records.php"><i class="fas fa-calendar-day"></i> Today's Records</a>
+            <a href="approved_sit_in_sessions.php"><i class="fas fa-history"></i> Sit in Records</a>
+            <a href="active_sitin.php"><i class="fas fa-user-clock"></i> Active Sit-ins</a>
+            <a href="add_subject.php"><i class="fas fa-book"></i> Add Subject</a>
+            <a href="announcements.php"><i class="fas fa-bullhorn"></i> Announcements</a>
+            <a href="#" id="searchBtn"><i class="fas fa-search"></i> Search</a>
+            <a href="#" id="sitInBtn"><i class="fas fa-sign-in-alt"></i> Register Sit-in</a>
+            <a href="#" id="studentsBtn"><i class="fas fa-users"></i> Students</a>
         </div>
         <div class="logout-container">
-            <a href="logout.php">Logout</a>
+            <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="content">
+            <h1>Admin Dashboard</h1>
+            
+            <!-- Current Sit-in Statistics -->
+            <div class="stats-container">
+                <?php
+                // Query to count active sit-ins
+                $activeSitInQuery = "SELECT COUNT(*) as active_count FROM sit_in_requests WHERE is_active = 1";
+                $activeSitInResult = $conn->query($activeSitInQuery);
+                $activeSitInCount = 0;
+                
+                if ($activeSitInResult && $activeSitInRow = $activeSitInResult->fetch_assoc()) {
+                    $activeSitInCount = $activeSitInRow['active_count'];
+                }
+                
+                // Query to count total students in current sit-ins
+                $studentsQuery = "SELECT COUNT(DISTINCT student_id) as student_count FROM sit_in_requests WHERE is_active = 1";
+                $studentsResult = $conn->query($studentsQuery);
+                $studentCount = 0;
+                
+                if ($studentsResult && $studentsRow = $studentsResult->fetch_assoc()) {
+                    $studentCount = $studentsRow['student_count'];
+                }
+                
+                // Get purpose statistics for pie chart (programming languages)
+                $purposeStatsSql = "SELECT purpose, COUNT(*) as count 
+                                   FROM sit_in_requests 
+                                   WHERE is_active = 1 
+                                   GROUP BY purpose";
+                $purposeStatsResult = $conn->query($purposeStatsSql);
+                $purposeData = [];
+                while ($row = $purposeStatsResult->fetch_assoc()) {
+                    $purposeData[$row['purpose']] = (int)$row['count'];
+                }
+                
+                // Get lab statistics for pie chart
+                $labStatsSql = "SELECT s.lab_number, COUNT(*) as count 
+                               FROM sit_in_requests r
+                               JOIN subjects s ON r.subject_id = s.id
+                               WHERE r.is_active = 1 
+                               GROUP BY s.lab_number";
+                $labStatsResult = $conn->query($labStatsSql);
+                $labData = [];
+                while ($row = $labStatsResult->fetch_assoc()) {
+                    $labData[$row['lab_number']] = (int)$row['count'];
+                }
+                ?>
+                
+                <div class="stats-card">
+                    <div class="stats-icon">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="stats-info">
+                        <div class="stats-count"><?php echo $activeSitInCount; ?></div>
+                        <h3>Active Sit-ins</h3>
+                    </div>
+                </div>
+                
+                <div class="stats-card">
+                    <div class="stats-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stats-info">
+                        <div class="stats-count"><?php echo $studentCount; ?></div>
+                        <h3>Students In Labs</h3>
+                    </div>
+                </div>
+            </div>
+            <!-- End of Current Sit-in Statistics -->
+            
+            <!-- Charts for Current Sit-ins -->
+            <div class="charts-container">
+                <!-- Programming Languages Chart -->
+                <div class="chart-container">
+                    <div class="chart-title">Programming Languages</div>
+                    <canvas id="purposeChart" style="margin:10px"></canvas>
+                </div>
+                
+                <!-- Labs Chart -->
+                <div class="chart-container">
+                    <div class="chart-title">Laboratory Usage</div>
+                    <canvas id="labChart" style="margin:10px"></canvas>
+                </div>
+            </div>
+            <!-- End of Charts for Current Sit-ins -->
+            
+            <!-- Leaderboards Section -->
+            <div style="margin-top: 30px;">
+                <h2 style="color: #2c3e50; margin-bottom: 20px; text-align: center;">Sit-in Leaderboards</h2>
+                
+                <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
+                    <!-- Most Active Students -->
+                    <div style="flex: 1; min-width: 300px; max-width: 600px; background: white; border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); padding: 20px;">
+                        <h3 style="color: #3498db; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; font-size: 18px;">
+                            <i class="fas fa-trophy" style="color: gold; margin-right: 10px;"></i>Most Active Participants
+                        </h3>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background-color: #f8f9fa;">
+                                    <th style="padding: 12px 8px; text-align: center; border-bottom: 2px solid #eee;">#</th>
+                                    <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #eee;">Student</th>
+                                    <th style="padding: 12px 8px; text-align: center; border-bottom: 2px solid #eee;">Course</th>
+                                    <th style="padding: 12px 8px; text-align: center; border-bottom: 2px solid #eee;">Sessions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mostActiveTbody">
+                                <?php
+                                if (!empty($activeParticipants)) {
+                                    foreach ($activeParticipants as $index => $participant) {
+                                        ?>
+                                        <tr>
+                                            <td style="padding: 12px 8px; text-align: center; border-bottom: 1px solid #eee; font-weight: bold;"><?php echo $index + 1; ?></td>
+                                            <td style="padding: 12px 8px; text-align: left; border-bottom: 1px solid #eee;">
+                                                <span style="font-weight: bold;"><?php echo $participant['firstname'] . ' ' . $participant['lastname']; ?></span><br>
+                                                <span style="font-size: 12px; color: #7f8c8d;">ID: <?php echo $participant['idno']; ?></span>
+                                            </td>
+                                            <td style="padding: 12px 8px; text-align: center; border-bottom: 1px solid #eee;"><?php echo $participant['course']; ?></td>
+                                            <td style="padding: 12px 8px; text-align: center; border-bottom: 1px solid #eee; font-weight: bold; color: #27ae60;"><?php echo $participant['session_count']; ?></td>
+                                        </tr>
+                                        <?php
+                                    }
+                                } else {
+                                    echo '<tr><td colspan="4" style="text-align: center; padding: 20px;">No records found</td></tr>';
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                        <div style="text-align: right; margin-top: 15px;">
+                            <a href="#" id="viewAllActive" style="color: #3498db; text-decoration: none; font-size: 14px;">View All <i class="fas fa-arrow-right" style="font-size: 12px;"></i></a>
+                        </div>
+                    </div>
+                    
+                    <!-- Top Performing Students (by hours spent) -->
+                    <div style="flex: 1; min-width: 300px; max-width: 600px; background: white; border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); padding: 20px;">
+                        <h3 style="color: #3498db; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; font-size: 18px;">
+                            <i class="fas fa-star" style="color: #f1c40f; margin-right: 10px;"></i>Top Hours Logged
+                        </h3>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background-color: #f8f9fa;">
+                                    <th style="padding: 12px 8px; text-align: center; border-bottom: 2px solid #eee;">#</th>
+                                    <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #eee;">Student</th>
+                                    <th style="padding: 12px 8px; text-align: center; border-bottom: 2px solid #eee;">Course</th>
+                                    <th style="padding: 12px 8px; text-align: center; border-bottom: 2px solid #eee;">Hours</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topPerformersTbody">
+                                <?php
+                                if (!empty($topPerformers)) {
+                                    foreach ($topPerformers as $index => $performer) {
+                                        ?>
+                                        <tr>
+                                            <td style="padding: 12px 8px; text-align: center; border-bottom: 1px solid #eee; font-weight: bold;"><?php echo $index + 1; ?></td>
+                                            <td style="padding: 12px 8px; text-align: left; border-bottom: 1px solid #eee;">
+                                                <span style="font-weight: bold;"><?php echo $performer['firstname'] . ' ' . $performer['lastname']; ?></span><br>
+                                                <span style="font-size: 12px; color: #7f8c8d;">ID: <?php echo $performer['idno']; ?></span>
+                                            </td>
+                                            <td style="padding: 12px 8px; text-align: center; border-bottom: 1px solid #eee;"><?php echo $performer['course']; ?></td>
+                                            <td style="padding: 12px 8px; text-align: center; border-bottom: 1px solid #eee; font-weight: bold; color: #9b59b6;"><?php echo $performer['total_hours']; ?></td>
+                                        </tr>
+                                        <?php
+                                    }
+                                } else {
+                                    echo '<tr><td colspan="4" style="text-align: center; padding: 20px;">No records found</td></tr>';
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                        <div style="text-align: right; margin-top: 15px;">
+                            <a href="#" id="viewAllPerformers" style="color: #3498db; text-decoration: none; font-size: 14px;">View All <i class="fas fa-arrow-right" style="font-size: 12px;"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- End of Leaderboards Section -->
+            
+            <!-- Your dashboard content here -->
+        </div>
+        
+        <footer>
+            &copy; <?php echo date("Y"); ?> Sit-in Monitoring System
+        </footer>
     </div>
         
     <!-- Search Modal -->
@@ -547,6 +860,16 @@ if (!isset($_SESSION["admin_id"])) {
                             <option value="ASP.NET">ASP.NET</option>
                             <option value="C#">C#</option>
                             <option value="Python">Python</option>
+                            <option value="C Programming">C Programming</option>
+                            <option value="Database">Database</option>
+                            <option value="Digital & Logic Design">Digital & Logic Design</option>
+                            <option value="Embedded Systems & IoT">Embedded Systems & IoT</option>
+                            <option value="System Integration & Architecture">System Integration & Architecture</option>
+                            <option value="Computer Application">Computer Application</option>
+                            <option value="Project Management">Project Management</option>
+                            <option value="IT Trends">IT Trends</option>
+                            <option value="Technopreneurship">Technopreneurship</option>
+                            <option value="Capstone">Capstone</option>
                             <option value="Other">Other</option>
                         </select>
                     </div>
@@ -563,100 +886,45 @@ if (!isset($_SESSION["admin_id"])) {
         </div>
     </div>
 
-    <div class="content">
-        <h1>Admin Dashboard</h1>
-        
-        <!-- Current Sit-in Statistics -->
-        <div class="stats-container">
-            <?php
-            // Query to count active sit-ins
-            $activeSitInQuery = "SELECT COUNT(*) as active_count FROM sit_in_requests WHERE is_active = 1";
-            $activeSitInResult = $conn->query($activeSitInQuery);
-            $activeSitInCount = 0;
-            
-            if ($activeSitInResult && $activeSitInRow = $activeSitInResult->fetch_assoc()) {
-                $activeSitInCount = $activeSitInRow['active_count'];
-            }
-            
-            // Query to count total students in current sit-ins
-            $studentsQuery = "SELECT COUNT(DISTINCT student_id) as student_count FROM sit_in_requests WHERE is_active = 1";
-            $studentsResult = $conn->query($studentsQuery);
-            $studentCount = 0;
-            
-            if ($studentsResult && $studentsRow = $studentsResult->fetch_assoc()) {
-                $studentCount = $studentsRow['student_count'];
-            }
-            
-            // Get purpose statistics for pie chart (programming languages)
-            $purposeStatsSql = "SELECT purpose, COUNT(*) as count 
-                               FROM sit_in_requests 
-                               WHERE is_active = 1 
-                               GROUP BY purpose";
-            $purposeStatsResult = $conn->query($purposeStatsSql);
-            $purposeData = [];
-            while ($row = $purposeStatsResult->fetch_assoc()) {
-                $purposeData[$row['purpose']] = (int)$row['count'];
-            }
-            
-            // Get lab statistics for pie chart
-            $labStatsSql = "SELECT s.lab_number, COUNT(*) as count 
-                           FROM sit_in_requests r
-                           JOIN subjects s ON r.subject_id = s.id
-                           WHERE r.is_active = 1 
-                           GROUP BY s.lab_number";
-            $labStatsResult = $conn->query($labStatsSql);
-            $labData = [];
-            while ($row = $labStatsResult->fetch_assoc()) {
-                $labData[$row['lab_number']] = (int)$row['count'];
-            }
-            ?>
-            
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="fas fa-user-check"></i>
-                </div>
-                <div class="stats-info">
-                    <div class="stats-count"><?php echo $activeSitInCount; ?></div>
-                    <h3>Active Sit-ins</h3>
-                </div>
+    <!-- Students Modal -->
+    <div id="studentsModal" class="modal">
+        <div class="modal-content" style="width: 80%; max-height: 80vh; overflow-y: auto;">
+            <span class="close studentsClose">&times;</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>All Registered Students</h2>
+                <button id="resetAllSessionsBtn" style="background-color: #e74c3c; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Reset All Sessions</button>
             </div>
-            
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div class="stats-info">
-                    <div class="stats-count"><?php echo $studentCount; ?></div>
-                    <h3>Students In Labs</h3>
+            <div id="studentsContainer" style="margin-top: 20px;">
+                <div class="table-responsive">
+                    <table class="table table-striped" style="width: 100%; border-collapse: collapse;">
+                        <thead style="background-color: #3498db; color: white;">
+                            <tr>
+                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">ID Number</th>
+                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Name</th>
+                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Course</th>
+                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Year</th>
+                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Remaining Sessions</th>
+                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsList">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 20px;">Loading students...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-        <!-- End of Current Sit-in Statistics -->
-        
-        <!-- Charts for Current Sit-ins -->
-        <div class="charts-container">
-            <!-- Programming Languages Chart -->
-            <div class="chart-container">
-                <div class="chart-title">Programming Languages</div>
-                <canvas id="purposeChart"></canvas>
-            </div>
-            
-            <!-- Labs Chart -->
-            <div class="chart-container">
-                <div class="chart-title">Laboratory Usage</div>
-                <canvas id="labChart"></canvas>
-            </div>
-        </div>
-        <!-- End of Charts for Current Sit-ins -->
-        
-        <!-- Your dashboard content here -->
     </div>
 
-    <footer>
-        &copy; <?php echo date("Y"); ?> Sit-in Monitoring System
-    </footer>
-
     <script>
+        // Sidebar Toggle Functionality
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.body.classList.toggle('sidebar-active');
+        });
+
         document.addEventListener('DOMContentLoaded', function() {
             // Get the search modal
             var searchModal = document.getElementById("searchModal");
@@ -1001,6 +1269,252 @@ if (!isset($_SESSION["admin_id"])) {
                         }
                     }
                 }
+            });
+
+            // Get the students modal
+            var studentsModal = document.getElementById("studentsModal");
+            
+            // Get the students button that opens the modal
+            var studentsBtn = document.getElementById("studentsBtn");
+            
+            // Get the <span> element that closes the students modal
+            var studentsClose = document.getElementsByClassName("studentsClose")[0];
+            
+            // When the user clicks the students button, open the students modal 
+            studentsBtn.onclick = function() {
+                studentsModal.style.display = "block";
+                loadAllStudents();
+            }
+            
+            // When the user clicks on <span> (x), close the students modal
+            studentsClose.onclick = function() {
+                studentsModal.style.display = "none";
+            }
+            
+            // Update window onclick to include the students modal
+            window.onclick = function(event) {
+                if (event.target == searchModal) {
+                    searchModal.style.display = "none";
+                }
+                if (event.target == sitInModal) {
+                    sitInModal.style.display = "none";
+                }
+                if (event.target == studentsModal) {
+                    studentsModal.style.display = "none";
+                }
+            }
+            
+            // Function to load all students - keep only this one, remove any duplicates
+            function loadAllStudents() {
+                var studentsList = document.getElementById("studentsList");
+                studentsList.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Loading students...</td></tr>';
+                
+                // AJAX request to fetch all students
+                var xhr = new XMLHttpRequest();
+                xhr.open("GET", "get_all_students.php", true);
+                
+                xhr.onreadystatechange = function() {
+                    if (this.readyState === XMLHttpRequest.DONE) {
+                        if (this.status === 200) {
+                            try {
+                                var response = JSON.parse(this.responseText);
+                                
+                                if (response.success) {
+                                    displayStudents(response.students);
+                                } else {
+                                    studentsList.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: red;">' + response.message + '</td></tr>';
+                                }
+                            } catch (e) {
+                                console.error("Error parsing JSON:", e, this.responseText);
+                                studentsList.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: red;">Error loading students data</td></tr>';
+                            }
+                        } else {
+                            studentsList.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: red;">Server error: ' + this.status + '. Please try again later.</td></tr>';
+                        }
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    studentsList.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: red;">Network error. Please check your connection and try again.</td></tr>';
+                };
+                
+                xhr.send();
+            }
+            
+            // Function to display students in the table
+            function displayStudents(students) {
+                var studentsList = document.getElementById("studentsList");
+                
+                if (students.length === 0) {
+                    studentsList.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No students found</td></tr>';
+                    return;
+                }
+                
+                studentsList.innerHTML = '';
+                
+                students.forEach(function(student) {
+                    // Handle any null or undefined values
+                    var idno = student.idno || '';
+                    var firstname = student.firstname || '';
+                    var middlename = student.middlename || '';
+                    var lastname = student.lastname || '';
+                    var course = student.course || '';
+                    var year = student.year || '';
+                    var remainingSessions = student.remaining_sessions !== null ? student.remaining_sessions : 30;
+                    
+                    var sessionsColor = parseInt(remainingSessions) <= 5 ? '#e74c3c' : '#27ae60';
+                    
+                    var row = document.createElement('tr');
+                    row.style.borderBottom = '1px solid #ddd';
+                    
+                    row.innerHTML = `
+                        <td style="padding: 10px;">${idno}</td>
+                        <td style="padding: 10px;">${firstname} ${middlename ? middlename + ' ' : ''}${lastname}</td>
+                        <td style="padding: 10px;">${course}</td>
+                        <td style="padding: 10px;">${year}</td>
+                        <td style="padding: 10px; color: ${sessionsColor}; font-weight: bold;">${remainingSessions}</td>
+                        <td style="padding: 10px;">
+                            <button onclick="viewStudentDetails('${student.id}')" style="background-color: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-right: 5px;">View</button>
+                            <button onclick="editStudent('${student.id}')" style="background-color: #f39c12; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-right: 5px;">Edit</button>
+                            <button onclick="registerSitIn('${student.idno || student.id}')" style="background-color: #2ecc71; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-right: 5px;">Sit-In</button>
+                            <button onclick="resetStudentSessions('${student.idno || student.id}')" style="background-color: #9b59b6; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-right: 5px;">Reset</button>
+                            <button onclick="viewStudentPoints('${student.idno || student.id}')" style="background-color: #f1c40f; color: #2c3e50; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Points</button>
+                        </td>
+                    `;
+                    
+                    studentsList.appendChild(row);
+                });
+            }
+            
+            // Placeholder functions for student actions
+            window.viewStudentDetails = function(studentId) {
+                alert("View student details functionality will be implemented here for student ID: " + studentId);
+            }
+            
+            window.editStudent = function(studentId) {
+                alert("Edit student functionality will be implemented here for student ID: " + studentId);
+            }
+            
+            window.viewStudentPoints = function(studentId) {
+                // Open the student points page in a new tab
+                window.open('view_student_points.php?student_id=' + studentId, '_blank');
+            }
+            
+            window.registerSitIn = function(studentId) {
+                // Close the students modal
+                studentsModal.style.display = "none";
+                
+                // Open the sit-in modal
+                sitInModal.style.display = "block";
+                
+                // Set the student ID in the sit-in form
+                document.getElementById("sitInStudentId").value = studentId;
+                
+                // Trigger the fetch student button click to load student info
+                document.getElementById("fetchStudentBtn").click();
+            }
+
+            // Function to reset sessions for an individual student
+            window.resetStudentSessions = function(studentId) {
+                if (confirm("Are you sure you want to reset the sessions for this student to 30?")) {
+                    // Show loading feedback
+                    const button = event.target;
+                    const originalText = button.textContent;
+                    button.textContent = "Resetting...";
+                    button.disabled = true;
+                    
+                    // AJAX request to reset sessions
+                    var xhr = new XMLHttpRequest();
+                    xhr.open("POST", "reset_sessions.php", true);
+                    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+                    
+                    xhr.onreadystatechange = function() {
+                        if (this.readyState === XMLHttpRequest.DONE) {
+                            // Reset button
+                            button.textContent = originalText;
+                            button.disabled = false;
+                            
+                            if (this.status === 200) {
+                                try {
+                                    var response = JSON.parse(this.responseText);
+                                    
+                                    if (response.success) {
+                                        alert("Sessions reset successfully!");
+                                        // Reload student list to show updated sessions
+                                        loadAllStudents();
+                                    } else {
+                                        alert("Error: " + response.message);
+                                    }
+                                } catch (e) {
+                                    console.error("Error parsing JSON:", e, this.responseText);
+                                    alert("Error processing server response.");
+                                }
+                            } else {
+                                alert("Server error: " + this.status + ". Please try again later.");
+                            }
+                        }
+                    };
+                    
+                    xhr.send("action=reset_individual&student_id=" + studentId);
+                }
+            }
+
+            // Event listener for Reset All Sessions button
+            document.getElementById("resetAllSessionsBtn").addEventListener("click", function() {
+                if (confirm("WARNING: This will reset sessions for ALL students to 30. This action cannot be undone. Continue?")) {
+                    // Show loading feedback
+                    const button = this;
+                    const originalText = button.textContent;
+                    button.textContent = "Resetting All...";
+                    button.disabled = true;
+                    
+                    // AJAX request to reset all sessions
+                    var xhr = new XMLHttpRequest();
+                    xhr.open("POST", "reset_sessions.php", true);
+                    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+                    
+                    xhr.onreadystatechange = function() {
+                        if (this.readyState === XMLHttpRequest.DONE) {
+                            // Reset button
+                            button.textContent = originalText;
+                            button.disabled = false;
+                            
+                            if (this.status === 200) {
+                                try {
+                                    var response = JSON.parse(this.responseText);
+                                    
+                                    if (response.success) {
+                                        alert("All students' sessions have been reset to 30!");
+                                        // Reload student list to show updated sessions
+                                        loadAllStudents();
+                                    } else {
+                                        alert("Error: " + response.message);
+                                    }
+                                } catch (e) {
+                                    console.error("Error parsing JSON:", e, this.responseText);
+                                    alert("Error processing server response.");
+                                }
+                            } else {
+                                alert("Server error: " + this.status + ". Please try again later.");
+                            }
+                        }
+                    };
+                    
+                    xhr.send("action=reset_all");
+                }
+            });
+
+            // Handle leaderboard "View All" clicks
+            document.getElementById("viewAllActive").addEventListener("click", function(e) {
+                e.preventDefault();
+                alert("This will show the complete list of most active sit-in participants.");
+                // This could open a modal or navigate to a dedicated page
+            });
+            
+            document.getElementById("viewAllPerformers").addEventListener("click", function(e) {
+                e.preventDefault();
+                alert("This will show the complete list of top performing sit-in participants.");
+                // This could open a modal or navigate to a dedicated page
             });
         });
     </script>

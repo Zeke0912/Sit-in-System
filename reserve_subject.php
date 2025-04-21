@@ -23,8 +23,8 @@ if ($conn->connect_error) {
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Check if 'subject_id' and 'student_id' are set
     if (isset($_POST['subject_id']) && isset($_POST['student_id'])) {
-        $subject_id = $_POST['subject_id'];
-        $student_id = $_POST['student_id'];
+        $subject_id = intval($_POST['subject_id']);
+        $student_id = intval($_POST['student_id']);
         $feedback = isset($_POST['feedback']) ? $_POST['feedback'] : "";  // Optional feedback from the student
 
         // Debug: Print the data
@@ -47,38 +47,42 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         $check_stmt->close();
 
-        // Set the SQL query to update the status
-        $sql = "UPDATE subjects SET status='pending' WHERE id=?";
+        // Get lab_number from the subjects table
+        $lab_sql = "SELECT lab_number FROM subjects WHERE id = ?";
+        $lab_stmt = $conn->prepare($lab_sql);
+        $lab_stmt->bind_param("i", $subject_id);
+        $lab_stmt->execute();
+        $lab_result = $lab_stmt->get_result();
         
-        $stmt = $conn->prepare($sql);
-        if ($stmt === false) {
-            error_log("Error preparing statement: " . $conn->error);  // Log if the statement preparation fails
-            echo "Error preparing query.";
-            exit();
-        }
-
-        // Bind the parameter and execute
-        $stmt->bind_param("i", $subject_id); // Bind the 'subject_id' parameter (integer type)
-        if ($stmt->execute()) {
-            // Insert the sit-in request in the sit_in_requests table
-            $sql_request = "INSERT INTO sit_in_requests (student_id, subject_id, status, feedback) VALUES (?, ?, 'pending', ?)";
-            $stmt_request = $conn->prepare($sql_request);
-            $stmt_request->bind_param("iis", $student_id, $subject_id, $feedback);
-            $stmt_request->execute();
-
-            if ($stmt_request->affected_rows > 0) {
-                echo "pending";  // Successfully reserved, returning 'pending' status
-            } else {
-                echo "Error inserting sit-in request.";
-            }
-
-            $stmt_request->close();
+        if ($lab_result->num_rows > 0) {
+            $row = $lab_result->fetch_assoc();
+            $lab_number = $row['lab_number'];
         } else {
-            error_log("Error executing SQL: " . $stmt->error);  // Log if query execution fails
-            echo "Error executing query.";
+            $lab_number = ""; // Default value if lab number is not found
+        }
+        $lab_stmt->close();
+
+        // Insert the sit-in request in the sit_in_requests table with the lab_number
+        $sql_request = "INSERT INTO sit_in_requests (student_id, subject_id, lab_number, purpose, status, feedback) 
+                        VALUES (?, ?, ?, 'Sit-in Session', 'pending', ?)";
+        $stmt_request = $conn->prepare($sql_request);
+        $stmt_request->bind_param("iiss", $student_id, $subject_id, $lab_number, $feedback);
+        
+        if ($stmt_request->execute()) {
+            // Update the status of the subject to 'pending'
+            $update_sql = "UPDATE subjects SET status = 'pending' WHERE id = ?";
+            $update_stmt = $conn->prepare($update_sql);
+            $update_stmt->bind_param("i", $subject_id);
+            $update_stmt->execute();
+            $update_stmt->close();
+            
+            echo "pending";  // Successfully reserved, returning 'pending' status
+        } else {
+            error_log("Error inserting sit-in request: " . $stmt_request->error);
+            echo "Error inserting sit-in request: " . $stmt_request->error;
         }
 
-        $stmt->close();
+        $stmt_request->close();
     } else {
         error_log("Missing subject_id or student_id in POST data.");
         echo "Missing subject_id or student_id";

@@ -72,7 +72,7 @@ $result = $stmt->get_result();
         }
 
         .container {
-            width: 90%;
+            width: 100%;
             max-width: 1200px;
             margin: 30px auto;
             padding: 20px;
@@ -387,35 +387,6 @@ $result = $stmt->get_result();
     $remaining_sessions = $max_sessions - $usedRow['used'];
     ?>
     
-    <!-- Student Info Header -->
-    <div style="display: flex; background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-        <div style="flex: 0 0 80px; margin-right: 20px;">
-            <img src="<?php echo !empty($user['photo']) ? $user['photo'] : 'uploads/default.png'; ?>" 
-                 style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db;" 
-                 alt="Profile Photo">
-        </div>
-        <div style="flex: 1;">
-            <h2 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 20px;">
-                <?php echo htmlspecialchars($user['firstname'] . ' ' . $user['lastname']); ?>
-            </h2>
-            <div style="display: flex; flex-wrap: wrap; gap: 15px;">
-                <div style="flex: 1; min-width: 150px;">
-                    <p style="margin: 5px 0; color: #7f8c8d;"><strong>ID Number:</strong> <?php echo htmlspecialchars($user['idno']); ?></p>
-                    <p style="margin: 5px 0; color: #7f8c8d;"><strong>Course:</strong> <?php echo htmlspecialchars($user['course']); ?></p>
-                </div>
-                <div style="flex: 1; min-width: 150px;">
-                    <p style="margin: 5px 0; color: #7f8c8d;"><strong>Year:</strong> <?php echo htmlspecialchars($user['year']); ?></p>
-                    <p style="margin: 5px 0; color: #7f8c8d;"><strong>Email:</strong> <?php echo htmlspecialchars($user['email']); ?></p>
-                </div>
-                <div style="flex: 1; min-width: 150px;">
-                    <p style="margin: 5px 0; color: #7f8c8d;"><strong>Remaining Sessions:</strong> <span style="font-weight: bold; color: #27ae60;"><?php echo $remaining_sessions; ?></span></p>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <h1>Sit-in Request History</h1>
-    
     <div class="feedback-message"><?php echo $feedbackMessage; ?></div>
     
     <div class="records-container">
@@ -436,25 +407,35 @@ $result = $stmt->get_result();
                     <?php 
                     $counter = 1;
                     while($row = $result->fetch_assoc()): 
-                        $start = new DateTime($row['start_time']);
-                        $end = new DateTime($row['end_time']);
-                        $duration = $start->diff($end);
                         $durationStr = '';
                         
-                        if ($duration->h > 0) {
-                            $durationStr .= $duration->h . 'h ';
+                        // Add null checks to prevent errors
+                        if (!empty($row['start_time']) && !empty($row['end_time'])) {
+                            $start = new DateTime($row['start_time']);
+                            $end = new DateTime($row['end_time']);
+                            $duration = $start->diff($end);
+                            
+                            if ($duration->h > 0) {
+                                $durationStr .= $duration->h . 'h ';
+                            }
+                            $durationStr .= $duration->i . 'm';
                         }
-                        $durationStr .= $duration->i . 'm';
                     ?>
                     <tr>
                         <td><?php echo $counter++; ?></td>
                         <td><?php echo htmlspecialchars($row['purpose']); ?></td>
                         <td><?php echo htmlspecialchars($row['lab_number']); ?></td>
-                        <td><?php echo date('Y-m-d', strtotime($row['end_time'])); ?></td>
-                        <td><?php echo date('H:i:s', strtotime($row['start_time'])) . ' - ' . date('H:i:s', strtotime($row['end_time'])); ?></td>
+                        <td><?php echo !empty($row['end_time']) ? date('Y-m-d', strtotime($row['end_time'])) : 'N/A'; ?></td>
+                        <td><?php 
+                            if (!empty($row['start_time']) && !empty($row['end_time'])) {
+                                echo date('H:i:s', strtotime($row['start_time'])) . ' - ' . date('H:i:s', strtotime($row['end_time']));
+                            } else {
+                                echo 'N/A';
+                            }
+                        ?></td>
                         <td><?php echo htmlspecialchars($row['status']); ?></td>
                         <td>
-                            <?php if (!empty($row['feedback'])): ?>
+                            <?php if (!empty($row['feedback']) && $row['feedback'] != "Looking forward to the session!"): ?>
                                 <?php 
                                 // Extract and display just the feedback content (without extra styling)
                                 $feedback = $row['feedback'];

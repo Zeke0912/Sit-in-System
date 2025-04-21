@@ -11,6 +11,45 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+// Debug mode
+$debug = false;  // Set to true to enable debugging
+if ($debug) {
+    // Enable error reporting
+    ini_set('display_errors', 1);
+    error_reporting(E_ALL);
+    
+    // Test query for today's records
+    $testSql = "SELECT COUNT(*) as count, 
+                DATE(end_time) as end_date,
+                DATE('$today') as today_date
+                FROM sit_in_requests 
+                WHERE is_active = 0 
+                GROUP BY DATE(end_time)
+                ORDER BY end_date DESC
+                LIMIT 10";
+    $testResult = $conn->query($testSql);
+    
+    echo "<div style='background: #f8d7da; padding: 10px; margin: 10px; border-radius: 5px;'>";
+    echo "<h3>Debug Information:</h3>";
+    echo "Today's date: $today<br>";
+    echo "Records by date:<br>";
+    echo "<ul>";
+    while ($row = $testResult->fetch_assoc()) {
+        echo "<li>Date: {$row['end_date']} - Count: {$row['count']}</li>";
+    }
+    echo "</ul>";
+    echo "</div>";
+}
+
+// Debug information - add this temporarily to see what's happening
+date_default_timezone_set('Asia/Manila'); // Or your correct timezone
+$today = date('Y-m-d');
+$todayStart = $today . ' 00:00:00';
+$todayEnd = $today . ' 23:59:59';
+
+// For debugging only - you can remove this later
+error_log("Today's date: $today, Start: $todayStart, End: $todayEnd");
+
 // Ensure only admins can access
 if (!isset($_SESSION["admin_id"])) {
     header("Location: index.php");
@@ -33,35 +72,36 @@ if (!empty($search)) {
                               s.lab_number LIKE '%$search%')";
 }
 
-// Get today's date in database format
-$today = date('Y-m-d');
-
-// Get total records count for pagination - exclude today's records
+// Get total records count for pagination - only Today's records
 $countSql = "SELECT COUNT(*) as total FROM sit_in_requests r
              JOIN users u ON r.student_id = u.idno
              JOIN subjects s ON r.subject_id = s.id
-             WHERE r.is_active = 0 AND DATE(r.end_time) < '$today'" . $searchCondition;
+             WHERE r.is_active = 0 AND DATE(r.end_time) = '$today'" . $searchCondition;
 $countResult = $conn->query($countSql);
 $totalRecords = $countResult->fetch_assoc()['total'];
 $totalPages = ceil($totalRecords / $entriesPerPage);
 
-// Fetch completed sit-in sessions - exclude today's records
-$sql = "SELECT r.id, r.student_id, r.subject_id, r.purpose, r.start_time, r.end_time, r.feedback,
+// Fetch completed sit-in sessions - only Today's records
+$sql = "SELECT r.id, r.student_id, r.subject_id, r.purpose, r.start_time, r.end_time,
         u.firstname, u.lastname, u.course, u.year,
         s.subject_name, s.lab_number
         FROM sit_in_requests r
         JOIN users u ON r.student_id = u.idno
         JOIN subjects s ON r.subject_id = s.id
-        WHERE r.is_active = 0 AND DATE(r.end_time) < '$today'" . $searchCondition . "
+        WHERE r.is_active = 0 AND DATE(r.end_time) = '$today'" . $searchCondition . "
         ORDER BY r.end_time DESC
         LIMIT $offset, $entriesPerPage";
 
 $result = $conn->query($sql);
+if (!$result) {
+    echo "Error in query: " . $conn->error;
+    exit;
+}
 
-// Get purpose statistics for pie chart - exclude today's records
+// Get purpose statistics for pie chart - only Today's records
 $purposeStatsSql = "SELECT r.purpose, COUNT(*) as count
                     FROM sit_in_requests r
-                    WHERE r.is_active = 0 AND DATE(r.end_time) < '$today'
+                    WHERE r.is_active = 0 AND DATE(r.end_time) = '$today'
                     GROUP BY r.purpose
                     ORDER BY count DESC";
 $purposeStatsResult = $conn->query($purposeStatsSql);
@@ -70,11 +110,11 @@ while ($row = $purposeStatsResult->fetch_assoc()) {
     $purposeData[$row['purpose']] = (int)$row['count'];
 }
 
-// Get lab statistics for pie chart - exclude today's records
+// Get lab statistics for pie chart - only Today's records
 $labStatsSql = "SELECT s.lab_number, COUNT(*) as count
                 FROM sit_in_requests r
                 JOIN subjects s ON r.subject_id = s.id
-                WHERE r.is_active = 0 AND DATE(r.end_time) < '$today'
+                WHERE r.is_active = 0 AND DATE(r.end_time) = '$today'
                 GROUP BY s.lab_number
                 ORDER BY count DESC";
 $labStatsResult = $conn->query($labStatsSql);
@@ -83,34 +123,34 @@ while ($row = $labStatsResult->fetch_assoc()) {
     $labData[$row['lab_number']] = (int)$row['count'];
 }
 
-// Get total sit-in count
+// Get total sit-in count for today
 $totalSitIns = $totalRecords;
 
-// Get top programming language - exclude today's records
+// Get top programming language for today
 $topPurposeSql = "SELECT purpose, COUNT(*) as count 
                 FROM sit_in_requests 
-                WHERE is_active = 0 AND DATE(end_time) < '$today'
+                WHERE is_active = 0 AND DATE(end_time) = '$today'
                 GROUP BY purpose 
                 ORDER BY count DESC 
                 LIMIT 1";
 $topPurposeResult = $conn->query($topPurposeSql);
 $topPurpose = $topPurposeResult->num_rows > 0 ? $topPurposeResult->fetch_assoc()['purpose'] : 'None';
 
-// Get most used lab - exclude today's records
+// Get most used lab for today
 $topLabSql = "SELECT s.lab_number, COUNT(*) as count 
              FROM sit_in_requests r
              JOIN subjects s ON r.subject_id = s.id
-             WHERE r.is_active = 0 AND DATE(r.end_time) < '$today'
+             WHERE r.is_active = 0 AND DATE(r.end_time) = '$today'
              GROUP BY s.lab_number 
              ORDER BY count DESC 
              LIMIT 1";
 $topLabResult = $conn->query($topLabSql);
 $topLab = $topLabResult->num_rows > 0 ? $topLabResult->fetch_assoc()['lab_number'] : 'None';
 
-// Get average session duration - exclude today's records
+// Get average session duration for today
 $avgDurationSql = "SELECT AVG(TIMESTAMPDIFF(MINUTE, start_time, end_time)) as avg_duration 
                   FROM sit_in_requests 
-                  WHERE is_active = 0 AND DATE(end_time) < '$today' AND end_time IS NOT NULL";
+                  WHERE is_active = 0 AND DATE(end_time) = '$today' AND end_time IS NOT NULL";
 $avgDurationResult = $conn->query($avgDurationSql);
 $avgDurationMinutes = $avgDurationResult->fetch_assoc()['avg_duration'];
 $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMinutes % 60) . 'm';
@@ -121,10 +161,10 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sit-in Records</title>
+    <title>Today's Sit-in Records</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -266,6 +306,66 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
             margin-bottom: 20px;
         }
         
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-250px);
+                transition: transform 0.3s ease;
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .sidebar-toggle {
+                display: block;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+            
+            body.sidebar-active .main-content {
+                margin-left: 250px;
+                width: calc(100% - 250px);
+            }
+            
+            body.sidebar-active .sidebar-toggle {
+                left: 265px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .chart-container {
+                width: 100%;
+                margin-bottom: 20px;
+            }
+            
+            .table-controls {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .search-control {
+                width: 100%;
+            }
+            
+            .search-control input {
+                width: 100%;
+            }
+            
+            .stat-card {
+                min-width: 45%;
+            }
+            
+            body.sidebar-active .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+        
         /* Stats Cards */
         .stats-overview {
             display: flex;
@@ -333,6 +433,14 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
             color: #2c3e50;
             margin-bottom: 15px;
             text-align: center;
+            font-weight: bold;
+        }
+        
+        /* Date Display */
+        .date-display {
+            font-size: 1.2rem;
+            color: #27ae60;
+            margin-bottom: 20px;
             font-weight: bold;
         }
         
@@ -437,201 +545,122 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
             width: 200px;
         }
 
-        footer {
-            text-align: center;
-            padding: 15px;
-            background-color: #2c3e50;
-            color: white;
-            width: 100%;
+        /* Points System */
+        .points-control {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            align-items: center;
         }
         
-        /* Feedback button and modal styles */
-        .view-feedback-btn {
-            background-color: #3498db;
+        .points-input {
+            width: 60px;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .award-btn {
+            background-color: #27ae60;
             color: white;
             border: none;
-            padding: 6px 12px;
             border-radius: 4px;
+            width: 30px;
+            height: 30px;
             cursor: pointer;
-            font-size: 13px;
-            transition: background-color 0.3s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
+            transition: background-color 0.2s;
         }
         
-        .view-feedback-btn:hover {
-            background-color: #2980b9;
+        .award-btn:hover {
+            background-color: #2ecc71;
         }
         
-        .view-feedback-btn i {
-            margin-right: 5px;
+        .points-control.awarded .points-input,
+        .points-control.awarded .award-btn {
+            opacity: 0.6;
+            pointer-events: none;
         }
         
-        .no-feedback {
-            color: #7f8c8d;
-            font-style: italic;
+        .points-display {
+            background-color: #3498db;
+            color: white;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-weight: bold;
+            text-align: center;
         }
         
-        .feedback-modal {
+        /* Point Award Modal */
+        .point-modal {
             display: none;
             position: fixed;
-            z-index: 1000;
-            left: 0;
             top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.5);
-            animation: fadeIn 0.3s;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1010;
+            justify-content: center;
+            align-items: center;
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        .modal-content {
-            background-color: #fefefe;
-            margin: 10% auto;
+        .point-modal-content {
+            background-color: white;
             padding: 25px;
-            border: 1px solid #e0e0e0;
-            width: 60%;
-            max-width: 600px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            animation: slideDown 0.3s;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            text-align: center;
         }
         
-        @keyframes slideDown {
-            from { transform: translateY(-50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        .point-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
         }
         
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            transition: color 0.3s ease;
-        }
-        
-        .close:hover,
-        .close:focus {
-            color: #333;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        
-        .feedback-content {
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 10px;
+        .point-message {
             font-size: 16px;
-            line-height: 1.6;
-            color: #333;
-            border-left: 4px solid #3498db;
+            margin-bottom: 20px;
+            line-height: 1.5;
         }
         
-        .student-name {
+        .point-award {
             font-weight: bold;
-            color: #2980b9;
+            color: #27ae60;
         }
-
-        /* Export button */
-        .export-feedback-btn {
-            background-color: #27ae60;
+        
+        .point-modal-btn {
+            background-color: #3498db;
             color: white;
             border: none;
             padding: 10px 20px;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
-            display: inline-flex;
-            align-items: center;
-            margin-bottom: 20px;
+            font-weight: bold;
+            margin-top: 10px;
         }
         
-        .export-feedback-btn:hover {
-            background-color: #2ecc71;
+        .point-modal-btn:hover {
+            background-color: #2980b9;
         }
         
-        .export-feedback-btn i {
-            margin-right: 8px;
+        /* Stats Additions */
+        .point-info {
+            display: inline-block;
+            margin-left: 5px;
+            font-size: 0.9em;
+            color: #7f8c8d;
         }
-        
-        /* Responsive adjustments for the feedback modal */
-        @media (max-width: 768px) {
-            .modal-content {
-                width: 90%;
-                margin: 15% auto;
-            }
-            
-            .view-feedback-btn {
-                padding: 5px 8px;
-                font-size: 12px;
-            }
-        }
-        
-        /* Responsive adjustments */
-        @media (max-width: 992px) {
-            .sidebar {
-                transform: translateX(-250px);
-                transition: transform 0.3s ease;
-            }
-            
-            .sidebar.active {
-                transform: translateX(0);
-            }
-            
-            .sidebar-toggle {
-                display: block;
-            }
-            
-            .main-content {
-                margin-left: 0;
-                width: 100%;
-            }
-            
-            body.sidebar-active .main-content {
-                margin-left: 250px;
-                width: calc(100% - 250px);
-            }
-            
-            body.sidebar-active .sidebar-toggle {
-                left: 265px;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .chart-container {
-                width: 100%;
-            }
-            
-            .table-controls {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-            
-            .search-control {
-                width: 100%;
-            }
-            
-            .search-control input {
-                width: 100%;
-            }
-            
-            .stat-card {
-                min-width: 45%;
-            }
-            
-            body.sidebar-active .main-content {
-                margin-left: 0;
-                width: 100%;
-            }
+
+        footer {
+            text-align: center;
+            padding: 15px;
+            background-color: #2c3e50;
+            color: white;
+            margin-top: 30px;
+            width: 100%;
         }
     </style>
 </head>
@@ -649,12 +678,12 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
         </div>
         <div class="nav-links">
             <a href="admin_dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-            <a href="manage_sit_in_requests.php"><i class="fas fa-tasks"></i> Manage Requests</a>
-            <a href="todays_sit_in_records.php"><i class="fas fa-calendar-day"></i> Today's Records</a>
-            <a href="approved_sit_in_sessions.php" class="active"><i class="fas fa-history"></i> Sit in Records</a>
+            <a href="todays_sit_in_records.php" class="active"><i class="fas fa-calendar-day"></i> Today's Records</a>
+            <a href="approved_sit_in_sessions.php"><i class="fas fa-history"></i> Sit in Records</a>
             <a href="active_sitin.php"><i class="fas fa-user-clock"></i> Active Sit-ins</a>
             <a href="reports.php"><i class="fas fa-chart-bar"></i> Sit-in Reports</a>
             <a href="feedback_reports.php"><i class="fas fa-comments"></i> Feedback Reports</a>
+            <a href="manage_sit_in_requests.php"><i class="fas fa-tasks"></i> Manage Requests</a>
             <a href="add_subject.php"><i class="fas fa-book"></i> Add Subject</a>
             <a href="announcements.php"><i class="fas fa-bullhorn"></i> Announcements</a>
         </div>
@@ -666,19 +695,24 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
     <!-- Main Content -->
     <div class="main-content">
         <div class="content">
-            <h1>Previous Sit-in Records</h1>
+            <h1>Today's Sit-in Records</h1>
+            
+            <!-- Today's Date Display -->
+            <div class="date-display">
+                <?php echo date('F d, Y'); ?> <span style="font-size: 0.8em;">(<?php echo $totalSitIns; ?> session<?php echo $totalSitIns != 1 ? 's' : ''; ?> today)</span>
+            </div>
             
             <!-- Charts Section -->
             <div class="charts-container">
                 <!-- Programming Languages Chart -->
                 <div class="chart-container">
-                    <div class="chart-title">Programming Languages</div>
+                    <div class="chart-title">Today's Programming Languages</div>
                     <canvas id="purposeChart"></canvas>
                 </div>
                 
                 <!-- Labs Chart -->
                 <div class="chart-container">
-                    <div class="chart-title">Laboratory Usage</div>
+                    <div class="chart-title">Today's Laboratory Usage</div>
                     <canvas id="labChart"></canvas>
                 </div>
             </div>
@@ -704,11 +738,6 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
                     </div>
                 </div>
                 
-                <!-- Export Feedback Button -->
-                <button class="export-feedback-btn" onclick="exportFeedbackReports()">
-                    <i class="fas fa-file-export"></i> Export Feedback Reports
-                </button>
-                
                 <!-- Records Table -->
                 <table class="records-table">
                     <thead>
@@ -720,8 +749,7 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
                             <th>Lab</th>
                             <th>Login</th>
                             <th>Logout</th>
-                            <th>Date</th>
-                            <th>Feedback</th>
+                            <th>Points</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -732,7 +760,6 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
                                 $fullName = $row['firstname'] . ' ' . $row['lastname'];
                                 $startTime = date('h:i:sa', strtotime($row['start_time']));
                                 $endTime = date('h:i:sa', strtotime($row['end_time']));
-                                $date = date('Y-m-d', strtotime($row['end_time']));
                                 
                                 echo "<tr>
                                     <td>{$counter}</td>
@@ -742,23 +769,17 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
                                     <td>{$row['lab_number']}</td>
                                     <td>{$startTime}</td>
                                     <td>{$endTime}</td>
-                                    <td>{$date}</td>
-                                    <td>";
-                                    
-                                if (!empty($row['feedback']) && $row['feedback'] != "Looking forward to the session!") {
-                                    echo "<button class='view-feedback-btn' onclick='viewFeedback(\"" . htmlspecialchars(addslashes($row['feedback'])) . "\", \"" . htmlspecialchars(addslashes($fullName)) . "\")'>
-                                        <i class='fas fa-comment-alt'></i> View Feedback
-                                    </button>";
-                                } else {
-                                    echo "<span class='no-feedback'>No feedback</span>";
-                                }
-                                
-                                echo "</td>
+                                    <td>
+                                        <div class='points-control' data-student='{$row['student_id']}' data-session='{$row['id']}'>
+                                            <input type='number' min='1' class='points-input' placeholder='Points'>
+                                            <button class='award-btn' title='Award points'><i class='fas fa-check'></i></button>
+                                        </div>
+                                    </td>
                                 </tr>";
                                 $counter++;
                             }
                         } else {
-                            echo "<tr><td colspan='9' style='text-align:center;'>No records found</td></tr>";
+                            echo "<tr><td colspan='8' style='text-align:center;'>No records found for today</td></tr>";
                         }
                         ?>
                     </tbody>
@@ -798,19 +819,27 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
                 </div>
             </div>
         </div>
-
+        
         <footer>
             &copy; <?php echo date("Y"); ?> Sit-in Monitoring System
         </footer>
     </div>
 
-    <!-- Feedback Modal -->
-    <div id="feedbackModal" class="feedback-modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Student Feedback</h2>
-            <p>Feedback from <span id="studentName" class="student-name"></span>:</p>
-            <div id="feedbackContent" class="feedback-content"></div>
+    <!-- Point Award Modal -->
+    <div class="point-modal" id="pointModal">
+        <div class="point-modal-content">
+            <div class="point-icon">
+                <i class="fas fa-award" style="color: #f1c40f;"></i>
+            </div>
+            <div class="point-message">
+                You've awarded <span id="pointsAwarded" class="point-award">3</span> points to student
+                <span id="studentName" class="point-award">John Doe</span>!
+                <div id="bonusMessage" style="margin-top: 10px; display: none;">
+                    <i class="fas fa-plus-circle" style="color: #27ae60;"></i> 
+                    Student has accumulated 3+ points and earned an extra session!
+                </div>
+            </div>
+            <button class="point-modal-btn" onclick="closePointModal()">Close</button>
         </div>
     </div>
 
@@ -820,64 +849,7 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
             document.getElementById('sidebar').classList.toggle('active');
             document.body.classList.toggle('sidebar-active');
         });
-        
-        // Feedback Modal Functionality
-        const modal = document.getElementById("feedbackModal");
-        const closeBtn = document.getElementsByClassName("close")[0];
-        
-        function viewFeedback(feedback, studentName) {
-            document.getElementById("feedbackContent").innerHTML = feedback;
-            document.getElementById("studentName").innerText = studentName;
-            modal.style.display = "block";
-        }
-        
-        closeBtn.onclick = function() {
-            modal.style.display = "none";
-        }
-        
-        window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = "none";
-            }
-        }
-        
-        // Function to handle entries per page change
-        function changeEntries(entries) {
-            window.location.href = '?page=1&entries=' + entries + '&search=<?php echo urlencode($search); ?>';
-        }
-        
-        // Function to handle search
-        function searchRecords() {
-            const searchQuery = document.getElementById('search').value;
-            window.location.href = '?page=1&entries=<?php echo $entriesPerPage; ?>&search=' + encodeURIComponent(searchQuery);
-        }
-        
-        // Function to export feedback reports
-        function exportFeedbackReports() {
-            // Create AJAX request to fetch all feedback
-            const xhr = new XMLHttpRequest();
-            xhr.open('GET', 'export_feedback.php', true);
-            xhr.responseType = 'blob';
-            
-            xhr.onload = function() {
-                if (this.status === 200) {
-                    const blob = new Blob([this.response], {type: 'text/csv'});
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = 'feedback_reports_' + new Date().toISOString().slice(0,10) + '.csv';
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                } else {
-                    alert('Failed to export feedback reports.');
-                }
-            };
-            
-            xhr.send();
-        }
-        
+
         // Chart.js setup for Purpose Pie Chart
         const purposeCtx = document.getElementById('purposeChart').getContext('2d');
         const purposeData = <?php echo json_encode(array_values($purposeData)); ?>;
@@ -890,7 +862,17 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
             '#e67e22', // Java - Orange 
             '#f1c40f', // ASP.Net - Yellow
             '#9b59b6', // Python - Purple
-            '#34495e'  // Other - Dark blue
+            '#34495e', // Other - Dark blue
+            '#2ecc71', // C Programming - Green
+            '#16a085', // Database - Dark Turquoise
+            '#8e44ad', // Digital & Logic Design - Purple
+            '#d35400', // Embedded Systems & IoT - Dark Orange
+            '#c0392b', // System Integration & Architecture - Red
+            '#27ae60', // Computer Application - Medium Green
+            '#2980b9', // Project Management - Medium Blue
+            '#f39c12', // IT Trends - Mustard
+            '#e74c3c', // Technopreneurship - Light Red
+            '#7f8c8d'  // Capstone - Gray
         ];
         
         new Chart(purposeCtx, {
@@ -945,12 +927,12 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
         
         // Colors for lab chart
         const labColors = [
-            '#ff9ff3', // Lab 524 - Pink
-            '#feca57', // Lab 526 - Yellow
-            '#ff6b6b', // Lab 528 - Red
-            '#1dd1a1', // Lab 530 - Green
-            '#54a0ff', // Lab 542 - Blue
-            '#5f27cd'  // Mac - Purple
+            '#ff9ff3', // Lab 1 - Pink
+            '#feca57', // Lab 2 - Yellow
+            '#ff6b6b', // Lab 3 - Red
+            '#1dd1a1', // Lab 4 - Green
+            '#54a0ff', // Lab 5 - Blue
+            '#5f27cd'  // Lab 6 - Purple
         ];
         
         new Chart(labCtx, {
@@ -998,6 +980,17 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
             }
         });
         
+        // Change entries per page
+        function changeEntries(entries) {
+            window.location.href = '?page=1&entries=' + entries + '&search=<?php echo urlencode($search); ?>';
+        }
+        
+        // Search records
+        function searchRecords() {
+            const searchTerm = document.getElementById('search').value;
+            window.location.href = '?page=1&entries=<?php echo $entriesPerPage; ?>&search=' + encodeURIComponent(searchTerm);
+        }
+        
         // Animate stat cards on page load
         document.addEventListener('DOMContentLoaded', () => {
             const statCards = document.querySelectorAll('.stat-card');
@@ -1008,6 +1001,112 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
                 }, 100 * index);
             });
         });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load existing points
+            loadStudentPoints();
+            
+            // Add event listeners to award buttons
+            const awardBtns = document.querySelectorAll('.award-btn');
+            awardBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const control = this.parentElement;
+                    const studentId = control.dataset.student;
+                    const sessionId = control.dataset.session;
+                    const input = control.querySelector('.points-input');
+                    const points = parseInt(input.value);
+                    
+                    if (isNaN(points) || points < 1) {
+                        alert('Please enter a valid number of points (minimum 1)');
+                        return;
+                    }
+                    
+                    // Award points
+                    awardPoints(studentId, sessionId, points);
+                });
+            });
+        });
+        
+        // Load existing points for students
+        function loadStudentPoints() {
+            // AJAX request to get existing points
+            fetch('get_student_points.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        data.points.forEach(item => {
+                            const control = document.querySelector(`.points-control[data-student="${item.student_id}"][data-session="${item.session_id}"]`);
+                            if (control) {
+                                // Replace input and button with points display
+                                control.innerHTML = `
+                                    <div class="points-display">${item.points} points awarded</div>
+                                `;
+                                control.classList.add('awarded');
+                            }
+                        });
+                    }
+                })
+                .catch(error => console.error('Error loading student points:', error));
+        }
+        
+        // Award points to a student
+        function awardPoints(studentId, sessionId, points) {
+            // AJAX request to award points
+            const formData = new FormData();
+            formData.append('student_id', studentId);
+            formData.append('session_id', sessionId);
+            formData.append('points', points);
+            
+            fetch('award_points.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update UI
+                    const control = document.querySelector(`.points-control[data-student="${studentId}"][data-session="${sessionId}"]`);
+                    if (control) {
+                        control.innerHTML = `
+                            <div class="points-display">${points} points awarded</div>
+                        `;
+                        control.classList.add('awarded');
+                    }
+                    
+                    // Show award modal
+                    document.getElementById('pointsAwarded').textContent = points;
+                    document.getElementById('studentName').textContent = data.student_name || studentId;
+                    
+                    // Enhanced bonus message
+                    if (data.bonus_awarded) {
+                        let bonusMessage = `Student has accumulated enough points and earned ${data.bonus_sessions} additional session(s)!`;
+                        if (data.bonus_sessions < Math.floor(data.available_points / 3)) {
+                            bonusMessage += `<br><span style="font-size: 0.9em; color: #e67e22;">(Max 30 sessions cap reached)</span>`;
+                        }
+                        document.getElementById('bonusMessage').innerHTML = `
+                            <i class="fas fa-plus-circle" style="color: #27ae60;"></i> 
+                            ${bonusMessage}
+                        `;
+                        document.getElementById('bonusMessage').style.display = 'block';
+                    } else {
+                        document.getElementById('bonusMessage').style.display = 'none';
+                    }
+                    
+                    document.getElementById('pointModal').style.display = 'flex';
+                } else {
+                    alert(data.message || 'Error awarding points');
+                }
+            })
+            .catch(error => {
+                console.error('Error awarding points:', error);
+                alert('Error awarding points. Please try again.');
+            });
+        }
+        
+        // Close the point award modal
+        function closePointModal() {
+            document.getElementById('pointModal').style.display = 'none';
+        }
     </script>
 </body>
 </html> 

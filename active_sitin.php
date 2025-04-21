@@ -77,6 +77,7 @@ if (isset($_POST['end_session']) && isset($_POST['request_id'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Current Sit-in Sessions</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -89,49 +90,127 @@ if (isset($_POST['end_session']) && isset($_POST['request_id'])) {
             background-color: #f8f9fa;
             color: #333;
             position: relative;
-        }
-
-        /* Top Navbar */
-        .navbar {
-            padding: 15px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 1000;  /* Ensure navbar stays on top */
-            background-color: #2c3e50;
-            box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
         }
 
-        .navbar a {
+        /* Left Sidebar Navigation */
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background-color: #2c3e50;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding: 20px 0;
+            color: #ecf0f1;
+            box-shadow: 3px 0 10px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar-header {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .sidebar-header h3 {
+            color: #ecf0f1;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-header p {
+            color: #bdc3c7;
+            font-size: 12px;
+        }
+        
+        .nav-links {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        
+        .nav-links a {
             color: #ecf0f1;
             text-decoration: none;
-            font-size: 16px;
-            padding: 10px;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-        }
-
-        .navbar a:hover {
-            background-color: #1abc9c;  /* New hover color */
-            color: white;
-        }
-
-        .navbar .nav-links {
+            padding: 12px 20px;
+            transition: background-color 0.3s, border-left 0.3s;
+            border-left: 3px solid transparent;
+            font-size: 14px;
             display: flex;
-            gap: 20px;
+            align-items: center;
+        }
+        
+        .nav-links a:hover, .nav-links a.active {
+            background-color: rgba(26, 188, 156, 0.2);
+            border-left: 3px solid #1abc9c;
+        }
+        
+        .nav-links a i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .logout-container {
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .logout-container a {
+            display: block;
+            padding: 10px;
+            background-color: #e74c3c;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            text-align: center;
+            transition: background-color 0.3s;
+        }
+        
+        .logout-container a:hover {
+            background-color: #c0392b;
+        }
+        
+        /* Toggle button for mobile */
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 5px;
+            z-index: 1001;
+            cursor: pointer;
+            font-size: 20px;
         }
 
         /* Main Content */
-        .content {
-            margin-top: 100px; /* Account for the height of the navbar */
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
             padding: 30px;
-            margin: 30px auto;
-            width: 85%;
+            width: calc(100% - 250px);
+            transition: margin-left 0.3s, width 0.3s;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .content {
+            width: 100%;
             text-align: center;
+            flex: 1;
+            padding-bottom: 20px;
         }
 
         h1 {
@@ -206,19 +285,6 @@ if (isset($_POST['end_session']) && isset($_POST['request_id'])) {
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
-
-        /* Logout Button */
-        .logout-container a {
-            color: white;
-            background-color: #e74c3c;
-            padding: 10px 20px;
-            border-radius: 5px;
-            text-decoration: none;
-        }
-
-        .logout-container a:hover {
-            background-color: #c0392b;
-        }
         
         /* Timer */
         .timer {
@@ -231,25 +297,40 @@ if (isset($_POST['end_session']) && isset($_POST['request_id'])) {
             padding: 15px;
             background-color: #2c3e50;
             color: white;
-            margin-top: 30px;
+            width: 100%;
         }
 
-        @media (max-width: 768px) {
-            .navbar {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .content {
-                margin-top: 130px;
-                width: 95%;
-            }
-
-            .navbar .nav-links {
-                flex-direction: column;
-                gap: 10px;
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-250px);
+                transition: transform 0.3s ease;
             }
             
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .sidebar-toggle {
+                display: block;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+            
+            body.sidebar-active .main-content {
+                margin-left: 250px;
+                width: calc(100% - 250px);
+            }
+            
+            body.sidebar-active .sidebar-toggle {
+                left: 265px;
+            }
+        }
+        
+        @media (max-width: 768px) {
             .sessions-table {
                 font-size: 14px;
             }
@@ -258,99 +339,125 @@ if (isset($_POST['end_session']) && isset($_POST['request_id'])) {
             .sessions-table td {
                 padding: 8px 10px;
             }
+            
+            body.sidebar-active .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
 
-    <!-- Top Navbar -->
-    <div class="navbar">
+    <!-- Mobile Sidebar Toggle Button -->
+    <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Left Sidebar Navigation -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3>Sit-in Monitoring</h3>
+            <p>Admin Panel</p>
+        </div>
         <div class="nav-links">
-            <a href="admin_dashboard.php">Dashboard</a>
-            <a href="manage_sit_in_requests.php">Manage Sit-in Requests</a>
-            <a href="approved_sit_in_sessions.php">Sit in Records</a>
-            <a href="active_sitin.php">Active Sit-ins</a>
-            <a href="add_subject.php">Add Subject</a>
-            <a href="announcements.php">Announcements</a>
+            <a href="admin_dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="manage_sit_in_requests.php"><i class="fas fa-tasks"></i> Manage Requests</a>
+            <a href="todays_sit_in_records.php"><i class="fas fa-calendar-day"></i> Today's Records</a>
+            <a href="approved_sit_in_sessions.php"><i class="fas fa-history"></i> Sit in Records</a>
+            <a href="active_sitin.php" class="active"><i class="fas fa-user-clock"></i> Active Sit-ins</a>
+            <a href="add_subject.php"><i class="fas fa-book"></i> Add Subject</a>
+            <a href="announcements.php"><i class="fas fa-bullhorn"></i> Announcements</a>
         </div>
         <div class="logout-container">
-            <a href="logout.php">Logout</a>
+            <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </div>
 
-    <div class="content">
-        <h1>Current Sit-in Sessions</h1>
-        
-        <!-- Display alert messages -->
-        <?php if (isset($_SESSION['message'])): ?>
-            <div class="alert alert-<?php echo $_SESSION['message_type']; ?>">
-                <?php 
-                    echo $_SESSION['message'];
-                    // Clear message after displaying
-                    unset($_SESSION['message']);
-                    unset($_SESSION['message_type']);
-                ?>
-            </div>
-        <?php endif; ?>
-        
-        <?php
-        // Fetch active sit-in sessions
-        $sql = "SELECT r.id, r.student_id, r.subject_id, r.purpose, r.start_time,
-                u.firstname, u.lastname, u.course, u.year, u.remaining_sessions,
-                s.lab_number
-                FROM sit_in_requests r
-                JOIN users u ON r.student_id = u.idno
-                JOIN subjects s ON r.subject_id = s.id
-                WHERE r.is_active = 1
-                ORDER BY r.start_time DESC";
-        
-        $result = $conn->query($sql);
-        
-        if ($result->num_rows > 0) {
-            echo '<table class="sessions-table">
-                <thead>
-                    <tr>
-                        <th>Student</th>
-                        <th>ID Number</th>
-                        <th>Course</th>
-                        <th>Year</th>
-                        <th>Lab</th>
-                        <th>Purpose</th>
-                        <th>Start Time</th>
-                        <th>Remaining Sessions</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>';
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="content">
+            <h1>Current Sit-in Sessions</h1>
             
-            while($row = $result->fetch_assoc()) {
-                echo '<tr>
-                    <td>' . $row['firstname'] . ' ' . $row['lastname'] . '</td>
-                    <td>' . $row['student_id'] . '</td>
-                    <td>' . $row['course'] . '</td>
-                    <td>' . $row['year'] . '</td>
-                    <td>' . $row['lab_number'] . '</td>
-                    <td>' . $row['purpose'] . '</td>
-                    <td>' . date('M d, Y g:i A', strtotime($row['start_time'])) . '</td>
-                    <td>' . $row['remaining_sessions'] . '</td>
-                    <td>
-                        <form method="post" onsubmit="return confirm(\'Are you sure you want to end this session?\');">
-                            <input type="hidden" name="request_id" value="' . $row['id'] . '">
-                            <button type="submit" name="end_session" class="end-btn">End Session</button>
-                        </form>
-                    </td>
-                </tr>';
+            <!-- Display alert messages -->
+            <?php if (isset($_SESSION['message'])): ?>
+                <div class="alert alert-<?php echo $_SESSION['message_type']; ?>">
+                    <?php 
+                        echo $_SESSION['message'];
+                        // Clear message after displaying
+                        unset($_SESSION['message']);
+                        unset($_SESSION['message_type']);
+                    ?>
+                </div>
+            <?php endif; ?>
+            
+            <?php
+            // Fetch active sit-in sessions
+            $sql = "SELECT r.id, r.student_id, r.subject_id, r.purpose, r.start_time,
+                    u.firstname, u.lastname, u.course, u.year, u.remaining_sessions,
+                    s.lab_number
+                    FROM sit_in_requests r
+                    JOIN users u ON r.student_id = u.idno
+                    JOIN subjects s ON r.subject_id = s.id
+                    WHERE r.is_active = 1
+                    ORDER BY r.start_time DESC";
+            
+            $result = $conn->query($sql);
+            
+            if ($result->num_rows > 0) {
+                echo '<table class="sessions-table">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>ID Number</th>
+                            <th>Course</th>
+                            <th>Year</th>
+                            <th>Lab</th>
+                            <th>Purpose</th>
+                            <th>Start Time</th>
+                            <th>Remaining Sessions</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>';
+                
+                while($row = $result->fetch_assoc()) {
+                    echo '<tr>
+                        <td>' . $row['firstname'] . ' ' . $row['lastname'] . '</td>
+                        <td>' . $row['student_id'] . '</td>
+                        <td>' . $row['course'] . '</td>
+                        <td>' . $row['year'] . '</td>
+                        <td>' . $row['lab_number'] . '</td>
+                        <td>' . $row['purpose'] . '</td>
+                        <td>' . date('M d, Y g:i A', strtotime($row['start_time'])) . '</td>
+                        <td>' . $row['remaining_sessions'] . '</td>
+                        <td>
+                            <form method="post" onsubmit="return confirm(\'Are you sure you want to end this session?\');">
+                                <input type="hidden" name="request_id" value="' . $row['id'] . '">
+                                <button type="submit" name="end_session" class="end-btn">End Session</button>
+                            </form>
+                        </td>
+                    </tr>';
+                }
+                
+                echo '</tbody></table>';
+            } else {
+                echo '<div class="no-sessions">No active sit-in sessions found.</div>';
             }
-            
-            echo '</tbody></table>';
-        } else {
-            echo '<div class="no-sessions">No active sit-in sessions found.</div>';
-        }
-        ?>
+            ?>
+        </div>
+
+        <footer>
+            &copy; <?php echo date("Y"); ?> Sit-in Monitoring System
+        </footer>
     </div>
 
-    <footer>
-        &copy; <?php echo date("Y"); ?> Sit-in Monitoring System
-    </footer>
+    <script>
+        // Sidebar Toggle Functionality
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.body.classList.toggle('sidebar-active');
+        });
+    </script>
 </body>
 </html> 

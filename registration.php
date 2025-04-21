@@ -69,62 +69,205 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["create"])) {
     <link rel="stylesheet" href="style.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registration</title>
+    <title>CCS Registration</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .registration-page {
+            background: #f5f5f5;
+        }
+        
+        .card {
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            width: 480px;
+            max-width: 100%;
+            margin: 20px auto;
+        }
+        
+        .card-header {
+            background: #2C3E50;
+            color: white;
+            padding: 20px;
+            position: relative;
+            text-align: center;
+        }
+        
+        .card-header h1 {
+            font-size: 24px;
+            margin: 0;
+            font-weight: 600;
+        }
+        
+        .card-header p {
+            font-size: 14px;
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+        
+        .back-link {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .card-body {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #2C3E50;
+            font-size: 14px;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #333;
+        }
+        
+        .form-control:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background: #2C3E50;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn-submit:hover {
+            background: #3498db;
+        }
+        
+        .form-footer {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        
+        /* Fix for file input */
+        .file-input {
+            margin: 10px 0;
+        }
+    </style>
 </head>
-<body>
-    <div class="form-container">
-        <a class="back-btn" href="index.php">Go Back</a>
-        <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post" enctype="multipart/form-data">
-            <h1>Registration</h1>
-            <label>IDNO</label>
-            <input type="text" name="idno" required><br>
-
-            <label>Lastname</label>
-            <input type="text" name="lastname" required><br>
-
-            <label>Firstname</label>
-            <input type="text" name="firstname" required><br>
-
-            <label>Middlename</label>
-            <input type="text" name="middlename"><br>
-
-            <label>Course</label>
-            <select name="course" required style="padding: 12px 15px;">
-                <option value="" disabled selected>-- Select Course --</option>
-                <option value="BSIT">BSIT</option>
-                <option value="BSCS">BSCS</option>
-                <option value="BSIS">BSIS</option>
-                <option value="BSECE">BSECE</option>
-            </select><br>
-
-            <label>Year Level</label>
-            <select name="year" required style="padding: 12px 15px;">
-                <option value="" disabled selected>-- Select Year Level --</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-            </select><br>
-
-            <label>Email Address</label>
-            <input type="email" name="email" required><br>
-
-            <label>Username</label>
-            <input type="text" name="username" required><br>
-
-            <label>Password</label>
-            <input type="password" name="password" required><br>
-
-            <label>Profile Photo</label>
-            <input type="file" name="profile_photo" accept="image/*"><br>
-
-            <button class="btn" type="submit" name="create">Sign Up</button><br><br>
-        </form>
+<body class="registration-page">
+    <div class="card">
+        <div class="card-header">
+            <a href="index.php" class="back-link"><i class="fas fa-arrow-left"></i> Back to Login</a>
+            <h1>Student Registration</h1>
+            <p>Create your CCS account</p>
+        </div>
+        <div class="card-body">
+            <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="idno">ID Number</label>
+                    <input type="text" id="idno" name="idno" class="form-control" required>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="lastname">Last Name</label>
+                        <input type="text" id="lastname" name="lastname" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="firstname">First Name</label>
+                        <input type="text" id="firstname" name="firstname" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="middlename">Middle Name</label>
+                    <input type="text" id="middlename" name="middlename" class="form-control">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="course">Course</label>
+                        <select id="course" name="course" class="form-control" required>
+                            <option value="" disabled selected>Select Course</option>
+                            <option value="BSIT">BSIT</option>
+                            <option value="BSCS">BSCS</option>
+                            <option value="BSIS">BSIS</option>
+                            <option value="BSECE">BSECE</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="year">Year Level</label>
+                        <select id="year" name="year" class="form-control" required>
+                            <option value="" disabled selected>Select Year</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="profile_photo">Profile Photo</label>
+                    <input type="file" id="profile_photo" name="profile_photo" class="file-input" accept="image/*">
+                </div>
+                
+                <button type="submit" name="create" class="btn-submit">Create Account</button>
+                
+                <div class="form-footer">
+                    Already have an account? <a href="index.php">Sign in here</a>
+                </div>
+            </form>
+        </div>
     </div>
 
     <?php
     if (isset($error_message)) {
-        echo "<p style='color: red;'>$error_message</p>";
+        echo "<p style='color: #e74c3c; text-align: center; margin-top: 15px; background: rgba(231, 76, 60, 0.1); padding: 10px; border-radius: 8px;'>$error_message</p>";
     }
     ?>
 </body>

@@ -1,5 +1,18 @@
 <?php
-session_start();
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Check if user is admin
+if (!isset($_SESSION["admin_id"])) {
+    // Return error as JSON
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Unauthorized access']);
+    exit();
+}
+
+// Database connection
 $servername = "localhost";
 $dbusername = "root";
 $dbpassword = "";
@@ -25,10 +38,10 @@ $search = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : 
 $searchCondition = '';
 if (!empty($search)) {
     $searchCondition = " AND (u.firstname LIKE '%$search%' OR 
-                             u.lastname LIKE '%$search%' OR 
-                             r.feedback LIKE '%$search%' OR 
-                             u.idno LIKE '%$search%' OR
-                             s.lab_number LIKE '%$search%')";
+                              u.lastname LIKE '%$search%' OR 
+                              r.feedback LIKE '%$search%' OR 
+                              u.idno LIKE '%$search%' OR
+                              s.lab_number LIKE '%$search%')";
 }
 
 // Fetch all feedback data
@@ -38,7 +51,8 @@ $sql = "SELECT r.id, r.student_id, r.feedback as message, r.end_time as date,
         FROM sit_in_requests r
         JOIN users u ON r.student_id = u.idno
         JOIN subjects s ON r.subject_id = s.id
-        WHERE r.is_active = 0" . $searchCondition . "
+        WHERE r.is_active = 0 AND r.feedback IS NOT NULL 
+        AND r.feedback != '' AND r.feedback != 'Looking forward to the session!'" . $searchCondition . "
         ORDER BY r.end_time DESC";
 
 $result = $conn->query($sql);
@@ -55,6 +69,9 @@ switch ($type) {
         
         // Open output stream
         $output = fopen('php://output', 'w');
+        
+        // Add BOM for Excel to correctly display UTF-8
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
         
         // Add CSV header row
         fputcsv($output, ['ID', 'Student ID', 'Name', 'Laboratory', 'Date', 'Message']);
@@ -123,9 +140,24 @@ switch ($type) {
                     font-family: Arial, sans-serif;
                     margin: 20px;
                 }
-                h1 {
+                .report-header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                .report-header h2 {
+                    margin: 5px 0;
+                    color: #2c3e50;
+                }
+                .report-header h3 {
+                    margin: 5px 0;
+                    color: #2c3e50;
+                }
+                .report-title {
+                    margin-top: 25px;
                     color: #2980b9;
                     text-align: center;
+                    font-size: 24px;
+                    font-weight: bold;
                 }
                 table {
                     width: 100%;
@@ -153,7 +185,12 @@ switch ($type) {
             </style>
         </head>
         <body>
-            <h1>Feedback Report</h1>
+            <div class="report-header">
+                <h2>University of Cebu Main Campus</h2>
+                <h3>College of Computer Studies</h3>
+                <h3>Computer Laboratory Sit-in Monitoring System</h3>
+            </div>
+            <div class="report-title">Feedback Report</div>
             
             <table>
                 <thead>

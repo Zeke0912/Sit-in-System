@@ -8,14 +8,14 @@
 
 /* General Styling */
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
+    font-family: 'Poppins', sans-serif;
+    background: url('ucmain.jpg') no-repeat center center fixed;
+    background-size: cover;
+    color: white;
     margin: 0;
     padding: 0;
-    text-align: left;  /* Remove centering text globally */
-    display: block;  /* Change from flex to block to stop centering */
+    min-height: 100vh;
 }
-
 
 /* Navbar */
 nav {
@@ -75,40 +75,28 @@ nav ul li a:hover {
     background: #c0392b;
 }
 
-/* ----- Body Styling ----- */
-body {
-    background: url('ucmain.jpg') no-repeat center center fixed;
-    background-size: cover;
-    color: white;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-}
-
 /* Page Layout */
 .container {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
-    padding-top: 120px; /* Increased padding for header space */
+    padding-top: 120px;
     width: 90%;
     max-width: 1200px;
     margin: auto;
     gap: 20px;
 }
+
 /* Profile Section */
 .profile-container {
-    width: 380px;  /* Increased width to accommodate longer text */
+    width: 380px;
     background: linear-gradient(to bottom right, #ffffff, #f0f0f0);
     padding: 25px;
     border-radius: 15px;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
     font-family: 'Arial', sans-serif;
-    position: relative;  /* Change from sticky to relative */
-    top: 0;  /* Ensure it is at the top */
+    position: relative;
+    top: 0;
 }
 
 /* Profile Info Section */
@@ -117,33 +105,30 @@ body {
     margin-top: 20px;
 }
 
-/* Flexbox for Each Profile Info Row (aligned horizontally) */
 .profile-info .info-row {
     display: flex;
-    justify-content: flex-start; /* Align elements at the start of the line */
+    justify-content: flex-start;
     align-items: center;
     margin: 10px 0;
     font-size: 14px;
-    gap: 10px;  /* Space between label and value */
+    gap: 10px;
 }
 
-/* Labels (bold and aligned to left) */
 .profile-info .info-row strong {
     font-weight: bold;
     color: #2c3e50;
-    min-width: 160px; /* Increased width to ensure longer text fits */
+    min-width: 160px;
     text-align: left;
 }
 
-/* Values (aligned to right) */
 .profile-info .info-row span {
     color: #34495e;
     font-size: 14px;
-    text-align: left; /* Align values to the left */
-    flex-grow: 1; /* Ensures that values take up remaining space */
-    white-space: nowrap;  /* Prevent text from wrapping */
-    overflow: hidden;  /* Hide overflowed text */
-    text-overflow: ellipsis; /* Show ellipsis for long text */
+    text-align: left;
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Profile Picture */
@@ -154,14 +139,13 @@ body {
     border: 4px solid #3498db;
     margin-bottom: 15px;
     transition: 0.3s;
-
 }
 
-/* Username (make sure it's readable and visible) */
+/* Username */
 .profile-container h3 {
     margin: 0;
     font-size: 22px;
-    color: #2c3e50 !important;  /* Forcing the color to dark */
+    color: #2c3e50 !important;
     font-weight: bold;
 }
 
@@ -181,34 +165,6 @@ body {
     background: linear-gradient(to right, #1abc9c, #3498db);
     transform: scale(1.05);
 }
-
-/* Responsive Design for Smaller Screens */
-@media (max-width: 768px) {
-    .profile-container {
-        width: 90%;
-        padding: 15px;
-    }
-
-    .profile-container img {
-        width: 100px;
-        height: 100px;
-    }
-
-    .profile-container h3 {
-        font-size: 20px;
-    }
-
-    .profile-info .info-row span {
-        font-size: 12px;
-    }
-
-    .profile-container a {
-        padding: 10px 15px;
-        font-size: 14px;
-    }
-}
-
-
 
 /* Main Dashboard Content */
 .dashboard-content {
@@ -235,7 +191,7 @@ body {
 }
 
 .rules-content {
-    display: none; /* Hide initially */
+    display: none;
     padding-top: 15px;
 }
 
@@ -268,8 +224,8 @@ body {
     color: #D35400;
 }
 
-/* ----- Login Page ----- */
-.login-page {
+/* ----- Login and Registration Pages ----- */
+.login-page, .registration-page {
     height: 100vh;
     display: flex;
     justify-content: center;
@@ -278,78 +234,113 @@ body {
 
 /* ----- Form Container ----- */
 .form-container {
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(255, 255, 255, 0.95);
     padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
     text-align: center;
-    color: white;
-    width: 350px;
+    width: 450px;
+    max-width: 90%;
+    color: #2C3E50;
 }
 
-/* ----- Input Fields ----- */
-input[type="text"], 
-input[type="password"], 
-input[type="email"] {
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border: none;
-    border-radius: 5px;
+.form-container h1 {
+    color: #2C3E50;
+    margin-bottom: 25px;
+    font-size: 28px;
+    text-align: center;
 }
 
-/* ----- Buttons ----- */
-button {
+.form-container label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #2C3E50;
+    text-align: left;
+}
+
+.form-container input[type="text"], 
+.form-container input[type="password"], 
+.form-container input[type="email"],
+.form-container select {
     width: 100%;
-    padding: 10px;
-    background: #007BFF;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    transition: all 0.3s;
+    font-size: 16px;
+}
+
+.form-container input[type="file"] {
+    width: 100%;
+    padding: 12px 0;
+    margin-bottom: 15px;
+}
+
+.form-container input:focus,
+.form-container select:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 8px rgba(52, 152, 219, 0.5);
+    outline: none;
+}
+
+.form-container button, .btn {
+    background: linear-gradient(to right, #3498db, #1abc9c);
     color: white;
     border: none;
-    border-radius: 5px;
+    padding: 12px 20px;
+    width: 100%;
+    border-radius: 8px;
     cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: all 0.3s;
+    margin-bottom: 15px;
 }
 
-button:hover {
-    background: #0056b3;
+.form-container button:hover, .btn:hover {
+    background: linear-gradient(to right, #1abc9c, #3498db);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.back-btn {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #2C3E50;
+    text-decoration: none;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.back-btn:hover {
+    color: #3498db;
+    transform: translateX(-5px);
+}
+
+.back-btn:before {
+    content: "←";
+    margin-right: 5px;
 }
 
 /* ----- Register Button ----- */
 .btn-register {
-    display: block;
+    display: inline-block;
     text-align: center;
     margin-top: 15px;
     color: white;
     text-decoration: none;
+    background: #27ae60;
+    padding: 10px 20px;
+    border-radius: 5px;
+    transition: all 0.3s;
 }
 
 .btn-register:hover {
-    text-decoration: underline;
-}
-
-/* ----- Navigation Bar ----- */
-.header {
-    width: 100%;
-    padding: 15px 0;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(10px);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 5%;
-    position: fixed;
-    top: 0;
-}
-
-.header a {
-    color: white;
-    text-decoration: none;
-    margin: 0 15px;
-    font-weight: bold;
-    transition: color 0.3s;
-}
-
-.header a:hover {
-    color: #ffcc00;
+    background: #2ecc71;
+    transform: translateY(-2px);
 }
 
 /* ----- Dashboard Container ----- */
@@ -389,15 +380,14 @@ button:hover {
 
 /* ----- Edit Profile Form ----- */
 .edit-profile-container {
-    background: rgba(0, 0, 0, 0.7); /* Semi-transparent black */
+    background: rgba(0, 0, 0, 0.7);
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
     max-width: 500px;
     margin: auto;
-    color: white; /* Make text white for better visibility */
+    color: white;
 }
-
 
 .edit-profile-container h2 {
     font-size: 24px;
@@ -431,27 +421,6 @@ button:hover {
     box-shadow: 0px 4px 10px rgba(255, 255, 255, 0.3);
 }
 
-/* Force dropdowns to match text input fields */
-.input-field, select {
-    width: 100% !important;  /* Ensures full width */
-    height: 50px !important; /* Ensures same height as inputs */
-    padding: 10px !important; /* Keeps padding consistent */
-    font-size: 18px !important; /* Match input text size */
-    border: 2px solid #ccc !important;
-    border-radius: 5px !important;
-    background-color: white !important;
-    color: black !important;
-}
-
-/* Ensure labels appear above dropdowns */
-label {
-    font-size: 18px;
-    font-weight: bold;
-    display: block;
-    margin-bottom: 5px;
-    color: white;
-}
-
 /* ----- Logout Button ----- */
 .logout-btn {
     background: red;
@@ -471,7 +440,26 @@ label {
 
 /* ----- Responsive Design ----- */
 @media (max-width: 768px) {
-    .dashboard, .user-info-container, .edit-profile-container {
+    .profile-container, .dashboard, .user-info-container, .edit-profile-container, .form-container {
         width: 90%;
+        padding: 15px;
+    }
+
+    .profile-container img {
+        width: 100px;
+        height: 100px;
+    }
+
+    .profile-container h3 {
+        font-size: 20px;
+    }
+
+    .profile-info .info-row span {
+        font-size: 12px;
+    }
+
+    .profile-container a {
+        padding: 10px 15px;
+        font-size: 14px;
     }
 }
