@@ -1,0 +1,90 @@
+/* PC Selection Styling */
+
+.pc-selection-header {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.pc-selection-header h3 {
+    font-size: 18px;
+    margin-bottom: 5px;
+    color: #2c3e50;
+}
+
+.pc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.pc-item {
+    text-align: center;
+    position: relative;
+}
+
+.pc-item input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.pc-label {
+    display: block;
+    padding: 10px 5px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.pc-available .pc-label {
+    background-color: #e8f5e9;
+    border-color: #c8e6c9;
+    color: #388e3c;
+}
+
+.pc-occupied .pc-label {
+    background-color: #ffebee;
+    border-color: #ffcdd2;
+    color: #d32f2f;
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.pc-label.selected,
+.pc-available input[type="radio"]:checked + .pc-label {
+    background-color: #4caf50;
+    color: white;
+    border-color: #388e3c;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+    transform: scale(1.05);
+}
+
+/* Media queries for different screen sizes */
+@media (max-width: 768px) {
+    .pc-grid {
+        grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+        gap: 8px;
+    }
+    
+    .pc-label {
+        padding: 8px 4px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .pc-grid {
+        grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+        gap: 5px;
+    }
+    
+    .pc-label {
+        padding: 6px 2px;
+        font-size: 11px;
+    }
+} 

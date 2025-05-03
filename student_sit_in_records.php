@@ -356,6 +356,7 @@ $result = $stmt->get_result();
         <li><a href="home.php">Dashboard</a></li>
         <li><a href="reservations.php">Reservations</a></li>
         <li><a href="student_sit_in_records.php">Sit-in Records</a></li>
+        <li><a href="redeem_points.php">Redeem Points</a></li>
         <li><a href="announcements.php">Announcements</a></li>
     </ul>
     <div class="logout-container">

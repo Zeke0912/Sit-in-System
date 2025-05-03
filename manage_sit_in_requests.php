@@ -18,14 +18,14 @@ if (!isset($_SESSION["admin_id"])) {
     exit();
 }
 
-// Step 1: Fetch all pending sit-in requests, join with subjects for date and time
+// Step 1: Fetch all pending sit-in requests with student info
 $sql = "
-    SELECT r.*, u.firstname, u.lastname, u.course, u.year, s.subject_name, s.lab_number, s.date, s.start_time as subject_start, s.end_time as subject_end
+    SELECT r.*, u.firstname, u.lastname, u.course, u.year, s.subject_name, s.lab_number
     FROM sit_in_requests r
     JOIN users u ON r.student_id = u.idno
-    JOIN subjects s ON r.subject_id = s.id
+    LEFT JOIN subjects s ON r.subject_id = s.id
     WHERE r.status = 'pending'
-    ORDER BY s.date, s.start_time";
+    ORDER BY r.start_time";
 
 $result = $conn->query($sql);
 
@@ -41,7 +41,7 @@ if (isset($_POST['action']) && isset($_POST['request_id'])) {
 
     if ($action == 'approve') {
         // Update the request to 'approved' and activate the session
-        $update_sql = "UPDATE sit_in_requests SET status = 'approved', is_active = 1, start_time = NOW() WHERE id = ?";
+        $update_sql = "UPDATE sit_in_requests SET status = 'approved', is_active = 1 WHERE id = ?";
     } elseif ($action == 'reject') {
         // Update the status to 'rejected'
         $update_sql = "UPDATE sit_in_requests SET status = 'rejected' WHERE id = ?";
@@ -53,29 +53,7 @@ if (isset($_POST['action']) && isset($_POST['request_id'])) {
         $stmt->execute();
         $stmt->close();
     }
-    
-    // If approved, get the subject information for the approval
-    if ($action == 'approve') {
-        // Get subject_id to update its status
-        $get_subject_sql = "SELECT subject_id FROM sit_in_requests WHERE id = ?";
-        $get_subject_stmt = $conn->prepare($get_subject_sql);
-        $get_subject_stmt->bind_param("i", $request_id);
-        $get_subject_stmt->execute();
-        $subject_result = $get_subject_stmt->get_result();
-        
-        if ($row = $subject_result->fetch_assoc()) {
-            $subject_id = $row['subject_id'];
-            
-            // Update subject status if needed
-            $update_subject_sql = "UPDATE subjects SET status = 'approved' WHERE id = ?";
-            $update_subject_stmt = $conn->prepare($update_subject_sql);
-            $update_subject_stmt->bind_param("i", $subject_id);
-            $update_subject_stmt->execute();
-            $update_subject_stmt->close();
-        }
-        $get_subject_stmt->close();
-    }
-    
+
     // Redirect back to this page after performing the action
     header("Location: manage_sit_in_requests.php");  // Refresh the page to show updated status
     exit();
@@ -93,6 +71,19 @@ $conn->close();
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #3498db;
+            --primary-dark: #2980b9;
+            --secondary-color: #2c3e50;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #34495e;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -100,7 +91,7 @@ $conn->close();
         }
 
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
             background-color: #f4f4f4;
             margin: 0;
             padding: 0;
@@ -232,13 +223,22 @@ $conn->close();
         .title-container {
             width: 100%;
             margin: 0px auto 20px;
-            padding: 15px;
-            background-color: white;  /* White background */
-            color: black; /* Dark blue text color */
+            padding: 20px;
+            background-color: var(--primary-color);
+            color: white;
             text-align: center;
             border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow to make the container stand out */
+            box-shadow: var(--shadow);
             font-size: 24px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .title-container i {
+            margin-right: 10px;
+            font-size: 28px;
         }
 
         .container {
@@ -247,24 +247,42 @@ $conn->close();
             padding: 20px;
             background-color: white;
             border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            width: 100%;
         }
 
         .requests-table {
             width: 100%;
             border-collapse: collapse;
+            white-space: nowrap;
         }
 
         .requests-table th, .requests-table td {
-            border: 1px solid #ddd;
-            padding: 10px;
+            border: 1px solid #eee;
+            padding: 12px 15px;
             text-align: left;
-            color: #333; /* Set text color to a darker color for readability */
+            color: #333;
         }
 
         .requests-table th {
-            background-color: #2980B9;
+            background-color: var(--primary-color);
             color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        
+        .requests-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .requests-table tr:hover {
+            background-color: #f1f5f9;
         }
 
         .requests-table td button {
@@ -272,30 +290,68 @@ $conn->close();
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+            margin: 0 2px;
         }
 
         .approve-btn {
-            background-color: #2C3E50;
+            background-color: var(--success-color);
             color: white;
         }
 
         .reject-btn {
-            background-color: #e74c3c;
+            background-color: var(--danger-color);
             color: white;
         }
 
         .approve-btn:hover {
-            background-color: #2980B9;
+            background-color: #219652;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
         }
 
         .reject-btn:hover {
             background-color: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+        
+        .purpose-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 600;
+            background-color: #f0f0f0;
+            color: #333;
         }
 
         .error-message {
-            color: red;
-            margin-top: 20px;
-            font-size: 16px;
+            color: var(--danger-color);
+            margin: 40px 0;
+            font-size: 18px;
+            text-align: center;
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 0;
+        }
+        
+        .empty-state i {
+            font-size: 64px;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .empty-state p {
+            color: #777;
+            font-size: 18px;
+            text-align: center;
         }
 
         footer {
@@ -339,6 +395,7 @@ $conn->close();
         @media (max-width: 768px) {
             .container, .title-container {
                 width: 100%;
+                padding: 15px;
             }
             
             .requests-table th, .requests-table td {
@@ -349,6 +406,10 @@ $conn->close();
             body.sidebar-active .main-content {
                 margin-left: 0;
                 width: 100%;
+            }
+            
+            .title-container {
+                font-size: 20px;
             }
         }
     </style>
@@ -375,6 +436,8 @@ $conn->close();
             <a href="reports.php"><i class="fas fa-chart-bar"></i> Sit-in Reports</a>
             <a href="add_subject.php"><i class="fas fa-book"></i> Add Subject</a>
             <a href="announcements.php"><i class="fas fa-bullhorn"></i> Announcements</a>
+            <a href="upload_lab_schedules.php"><i class="fas fa-calendar-alt"></i> Lab Schedules</a>
+            <a href="#" id="searchBtn"><i class="fas fa-search"></i> Search</a>
         </div>
         <div class="logout-container">
             <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -386,52 +449,76 @@ $conn->close();
         <div class="content">
             <!-- Title container -->
             <div class="title-container">
-                Manage Sit-in Requests
+                <i class="fas fa-clipboard-list"></i> Manage Sit-in Requests
             </div>
 
             <!-- Main content container for sit-in request table -->
             <div class="container">
                 <?php if ($result && $result->num_rows > 0): ?>
-                    <table class="requests-table">
-                        <tr>
-                            <th>Student ID</th>
-                            <th>Student Name</th>
-                            <th>Course/Year</th>
-                            <th>Subject</th>
-                            <th>Date</th>
-                            <th>Start Time</th>
-                            <th>End Time</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
+                    <div class="table-responsive">
+                        <table class="requests-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Student</th>
+                                    <th>Course/Year</th>
+                                    <th>Lab</th>
+                                    <th>Purpose</th>
+                                    <th>Date & Time</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php while ($row = $result->fetch_assoc()): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($row['student_id']); ?></td>
+                                        <td><?php echo htmlspecialchars($row['firstname'] . ' ' . $row['lastname']); ?></td>
+                                        <td><?php echo htmlspecialchars($row['course'] . ' - ' . $row['year']); ?></td>
+                                        <td><?php echo htmlspecialchars($row['lab_number']); ?></td>
+                                        <td>
+                                            <span class="purpose-badge">
+                                                <?php echo htmlspecialchars($row['purpose']); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <?php 
+                                            // Format the date and time from start_time
+                                            $dateTime = new DateTime($row['start_time']);
+                                            echo $dateTime->format('M d, Y - h:i A'); 
+                                            ?>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-<?php echo strtolower($row['status']); ?>">
+                                                <?php echo ucfirst(htmlspecialchars($row['status'])); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <!-- Buttons for Approve and Reject -->
+                                            <form method="POST" action="manage_sit_in_requests.php" style="display:inline-block;">
+                                                <input type="hidden" name="request_id" value="<?php echo $row['id']; ?>">
+                                                <button type="submit" name="action" value="approve" class="approve-btn">
+                                                    <i class="fas fa-check"></i> Approve
+                                                </button>
+                                            </form>
 
-                        <?php while ($row = $result->fetch_assoc()): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($row['student_id']); ?></td>
-                                <td><?php echo htmlspecialchars($row['firstname'] . ' ' . $row['lastname']); ?></td>
-                                <td><?php echo htmlspecialchars($row['course'] . ' - Year ' . $row['year']); ?></td>
-                                <td><?php echo htmlspecialchars($row['subject_name']); ?></td>
-                                <td><?php echo htmlspecialchars($row['date']); ?></td>
-                                <td><?php echo htmlspecialchars($row['subject_start']); ?></td>
-                                <td><?php echo htmlspecialchars($row['subject_end']); ?></td>
-                                <td><?php echo htmlspecialchars($row['status']); ?></td>
-                                <td>
-                                    <!-- Buttons for Approve and Reject -->
-                                    <form method="POST" action="manage_sit_in_requests.php" style="display:inline-block;">
-                    <input type="hidden" name="request_id" value="<?php echo $row['id']; ?>">
-                    <button type="submit" name="action" value="approve" class="approve-btn">Approve</button>
-                </form>
-
-                <form method="POST" action="manage_sit_in_requests.php" style="display:inline-block;">
-                    <input type="hidden" name="request_id" value="<?php echo $row['id']; ?>">
-                    <button type="submit" name="action" value="reject" class="reject-btn">Reject</button>
-                </form>
-                                </td>
-                            </tr>
-                        <?php endwhile; ?>
-                    </table>
+                                            <form method="POST" action="manage_sit_in_requests.php" style="display:inline-block;">
+                                                <input type="hidden" name="request_id" value="<?php echo $row['id']; ?>">
+                                                <button type="submit" name="action" value="reject" class="reject-btn">
+                                                    <i class="fas fa-times"></i> Reject
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endwhile; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 <?php else: ?>
-                    <p class="error-message">No pending sit-in requests at the moment.</p>
+                    <div class="empty-state">
+                        <i class="fas fa-clipboard-check"></i>
+                        <p>No pending sit-in requests at the moment.</p>
+                    </div>
                 <?php endif; ?>
             </div>
         </div>

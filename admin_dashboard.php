@@ -576,6 +576,71 @@ if ($topPerformersResult && $topPerformersResult->num_rows > 0) {
             text-align: center;
             font-weight: bold;
         }
+
+        /* PC Selection Styling */
+        .pc-selection-header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .pc-selection-header h3 {
+            font-size: 18px;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        
+        .pc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .pc-item {
+            text-align: center;
+            position: relative;
+        }
+        
+        .pc-item input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .pc-label {
+            display: block;
+            padding: 10px 5px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        .pc-available .pc-label {
+            background-color: #e8f5e9;
+            border-color: #c8e6c9;
+            color: #388e3c;
+        }
+        
+        .pc-occupied .pc-label {
+            background-color: #ffebee;
+            border-color: #ffcdd2;
+            color: #d32f2f;
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        .pc-label.selected,
+        .pc-available input[type="radio"]:checked + .pc-label {
+            background-color: #4caf50;
+            color: white;
+            border-color: #388e3c;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -598,6 +663,7 @@ if ($topPerformersResult && $topPerformersResult->num_rows > 0) {
             <a href="active_sitin.php"><i class="fas fa-user-clock"></i> Active Sit-ins</a>
             <a href="add_subject.php"><i class="fas fa-book"></i> Add Subject</a>
             <a href="announcements.php"><i class="fas fa-bullhorn"></i> Announcements</a>
+            <a href="lab_schedules_admin.php"><i class="fas fa-calendar-alt"></i> Lab Schedules</a>
             <a href="#" id="searchBtn"><i class="fas fa-search"></i> Search</a>
             <a href="#" id="sitInBtn"><i class="fas fa-sign-in-alt"></i> Register Sit-in</a>
             <a href="#" id="studentsBtn"><i class="fas fa-users"></i> Students</a>
@@ -879,6 +945,15 @@ if ($topPerformersResult && $topPerformersResult->num_rows > 0) {
                         <input type="text" id="otherPurpose" name="otherPurpose" placeholder="Please specify purpose">
                     </div>
                     
+                    <!-- PC Selection Section -->
+                    <div class="form-group">
+                        <label for="pc_selection">Select PC Station (Optional):</label>
+                        <div id="pc-selection-container">
+                            <p>Please select a laboratory first to view available PCs.</p>
+                        </div>
+                        <input type="hidden" id="selected_pc_number" name="pc_number" value="">
+                    </div>
+                    
                     <button type="submit" class="submit-btn">Register Sit-in Session</button>
                 </div>
             </form>
@@ -1098,6 +1173,93 @@ if ($topPerformersResult && $topPerformersResult->num_rows > 0) {
                 }
             });
             
+            // Handle subject selection change for PC selection
+            document.getElementById("subjectId").addEventListener("change", function() {
+                var subjectId = this.value;
+                
+                if (!subjectId) {
+                    document.getElementById("pc-selection-container").innerHTML = "<p>Please select a laboratory first to view available PCs.</p>";
+                    return;
+                }
+                
+                // Show loading message
+                document.getElementById("pc-selection-container").innerHTML = "<p>Loading available PCs...</p>";
+                
+                // AJAX request to fetch available PCs
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "register_direct_sitin.php", true);
+                xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+                xhr.onreadystatechange = function() {
+                    if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+                        try {
+                            var response = JSON.parse(this.responseText);
+                            
+                            if (response.success) {
+                                renderPCSelectionUI(response);
+                            } else {
+                                document.getElementById("pc-selection-container").innerHTML = 
+                                    "<div style='color: red;'>" + response.message + "</div>";
+                            }
+                        } catch (e) {
+                            console.error("Error parsing JSON:", e, this.responseText);
+                            document.getElementById("pc-selection-container").innerHTML = 
+                                "<div style='color: red;'>Error loading PC data. Please try again.</div>";
+                        }
+                    }
+                }
+                xhr.send("action=fetch_pcs&subjectId=" + subjectId);
+            });
+            
+            // Function to render PC selection UI
+            function renderPCSelectionUI(data) {
+                const container = document.getElementById("pc-selection-container");
+                
+                // Create the header
+                let html = `
+                    <div class="pc-selection-header">
+                        <h3>Select a PC for Lab ${data.lab_number}</h3>
+                        <p>${data.available_pcs.length} of ${data.total_pcs} PCs available</p>
+                    </div>
+                    <div class="pc-grid">
+                `;
+                
+                // Create grid of PCs
+                for (let i = 1; i <= data.total_pcs; i++) {
+                    const isAvailable = data.available_pcs.includes(i);
+                    const pcClass = isAvailable ? 'pc-available' : 'pc-occupied';
+                    const disabled = isAvailable ? '' : 'disabled';
+                    
+                    html += `
+                        <div class="pc-item ${pcClass}">
+                            <input type="radio" name="pc_number_radio" id="pc-${i}" value="${i}" ${disabled}>
+                            <label for="pc-${i}" class="pc-label">PC ${i}</label>
+                        </div>
+                    `;
+                }
+                
+                html += '</div>';
+                
+                // Render the HTML
+                container.innerHTML = html;
+                
+                // Add event listeners to the radio buttons
+                const radioButtons = container.querySelectorAll('input[type="radio"]');
+                radioButtons.forEach(radio => {
+                    radio.addEventListener('change', function() {
+                        // Update the hidden input value
+                        document.getElementById("selected_pc_number").value = this.value;
+                        
+                        // Remove the selected class from all labels
+                        document.querySelectorAll('.pc-label').forEach(label => {
+                            label.classList.remove('selected');
+                        });
+                        
+                        // Add the selected class to the chosen PC
+                        this.nextElementSibling.classList.add('selected');
+                    });
+                });
+            }
+            
             // Handle sit-in form submission
             document.getElementById("sitInForm").addEventListener("submit", function(e) {
                 e.preventDefault();
@@ -1108,6 +1270,7 @@ if ($topPerformersResult && $topPerformersResult->num_rows > 0) {
                 var studentName = document.getElementById("studentName").textContent;
                 var studentCourse = document.getElementById("studentCourse").textContent;
                 var studentYear = document.getElementById("studentYear").textContent;
+                var pcNumber = document.getElementById("selected_pc_number").value;
                 
                 if (purpose === "Other") {
                     purpose = document.getElementById("otherPurpose").value;
@@ -1144,6 +1307,8 @@ if ($topPerformersResult && $topPerformersResult->num_rows > 0) {
                             setTimeout(function() {
                                 document.getElementById("studentInfo").style.display = "none";
                                 document.getElementById("sitInForm").reset();
+                                document.getElementById("pc-selection-container").innerHTML = "<p>Please select a laboratory first to view available PCs.</p>";
+                                document.getElementById("selected_pc_number").value = "";
                             }, 5000);
                         }
                     }
@@ -1154,7 +1319,8 @@ if ($topPerformersResult && $topPerformersResult->num_rows > 0) {
                 
                 xhr.send("studentId=" + studentId + "&subjectId=" + subjectId + "&purpose=" + purpose + 
                         "&studentName=" + encodeURIComponent(studentName) + "&studentCourse=" + 
-                        encodeURIComponent(studentCourse) + "&studentYear=" + encodeURIComponent(studentYear));
+                        encodeURIComponent(studentCourse) + "&studentYear=" + encodeURIComponent(studentYear) +
+                        (pcNumber ? "&pc_number=" + encodeURIComponent(pcNumber) : ""));
             });
             
             // Chart.js setup for Purpose Pie Chart

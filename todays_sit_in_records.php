@@ -82,7 +82,7 @@ $totalRecords = $countResult->fetch_assoc()['total'];
 $totalPages = ceil($totalRecords / $entriesPerPage);
 
 // Fetch completed sit-in sessions - only Today's records
-$sql = "SELECT r.id, r.student_id, r.subject_id, r.purpose, r.start_time, r.end_time,
+$sql = "SELECT r.id, r.student_id, r.subject_id, r.purpose, r.start_time, r.end_time, r.pc_number,
         u.firstname, u.lastname, u.course, u.year,
         s.subject_name, s.lab_number
         FROM sit_in_requests r
@@ -747,9 +747,9 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
                             <th>Name</th>
                             <th>Purpose</th>
                             <th>Lab</th>
+                            <th>PC#</th>
                             <th>Login</th>
                             <th>Logout</th>
-                            <th>Points</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -767,14 +767,9 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
                                     <td>{$fullName}</td>
                                     <td>{$row['purpose']}</td>
                                     <td>{$row['lab_number']}</td>
+                                    <td>" . ($row['pc_number'] ? $row['pc_number'] : 'N/A') . "</td>
                                     <td>{$startTime}</td>
                                     <td>{$endTime}</td>
-                                    <td>
-                                        <div class='points-control' data-student='{$row['student_id']}' data-session='{$row['id']}'>
-                                            <input type='number' min='1' class='points-input' placeholder='Points'>
-                                            <button class='award-btn' title='Award points'><i class='fas fa-check'></i></button>
-                                        </div>
-                                    </td>
                                 </tr>";
                                 $counter++;
                             }
@@ -823,24 +818,6 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
         <footer>
             &copy; <?php echo date("Y"); ?> Sit-in Monitoring System
         </footer>
-    </div>
-
-    <!-- Point Award Modal -->
-    <div class="point-modal" id="pointModal">
-        <div class="point-modal-content">
-            <div class="point-icon">
-                <i class="fas fa-award" style="color: #f1c40f;"></i>
-            </div>
-            <div class="point-message">
-                You've awarded <span id="pointsAwarded" class="point-award">3</span> points to student
-                <span id="studentName" class="point-award">John Doe</span>!
-                <div id="bonusMessage" style="margin-top: 10px; display: none;">
-                    <i class="fas fa-plus-circle" style="color: #27ae60;"></i> 
-                    Student has accumulated 3+ points and earned an extra session!
-                </div>
-            </div>
-            <button class="point-modal-btn" onclick="closePointModal()">Close</button>
-        </div>
     </div>
 
     <script>
@@ -1001,112 +978,6 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
                 }, 100 * index);
             });
         });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            // Load existing points
-            loadStudentPoints();
-            
-            // Add event listeners to award buttons
-            const awardBtns = document.querySelectorAll('.award-btn');
-            awardBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const control = this.parentElement;
-                    const studentId = control.dataset.student;
-                    const sessionId = control.dataset.session;
-                    const input = control.querySelector('.points-input');
-                    const points = parseInt(input.value);
-                    
-                    if (isNaN(points) || points < 1) {
-                        alert('Please enter a valid number of points (minimum 1)');
-                        return;
-                    }
-                    
-                    // Award points
-                    awardPoints(studentId, sessionId, points);
-                });
-            });
-        });
-        
-        // Load existing points for students
-        function loadStudentPoints() {
-            // AJAX request to get existing points
-            fetch('get_student_points.php')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        data.points.forEach(item => {
-                            const control = document.querySelector(`.points-control[data-student="${item.student_id}"][data-session="${item.session_id}"]`);
-                            if (control) {
-                                // Replace input and button with points display
-                                control.innerHTML = `
-                                    <div class="points-display">${item.points} points awarded</div>
-                                `;
-                                control.classList.add('awarded');
-                            }
-                        });
-                    }
-                })
-                .catch(error => console.error('Error loading student points:', error));
-        }
-        
-        // Award points to a student
-        function awardPoints(studentId, sessionId, points) {
-            // AJAX request to award points
-            const formData = new FormData();
-            formData.append('student_id', studentId);
-            formData.append('session_id', sessionId);
-            formData.append('points', points);
-            
-            fetch('award_points.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Update UI
-                    const control = document.querySelector(`.points-control[data-student="${studentId}"][data-session="${sessionId}"]`);
-                    if (control) {
-                        control.innerHTML = `
-                            <div class="points-display">${points} points awarded</div>
-                        `;
-                        control.classList.add('awarded');
-                    }
-                    
-                    // Show award modal
-                    document.getElementById('pointsAwarded').textContent = points;
-                    document.getElementById('studentName').textContent = data.student_name || studentId;
-                    
-                    // Enhanced bonus message
-                    if (data.bonus_awarded) {
-                        let bonusMessage = `Student has accumulated enough points and earned ${data.bonus_sessions} additional session(s)!`;
-                        if (data.bonus_sessions < Math.floor(data.available_points / 3)) {
-                            bonusMessage += `<br><span style="font-size: 0.9em; color: #e67e22;">(Max 30 sessions cap reached)</span>`;
-                        }
-                        document.getElementById('bonusMessage').innerHTML = `
-                            <i class="fas fa-plus-circle" style="color: #27ae60;"></i> 
-                            ${bonusMessage}
-                        `;
-                        document.getElementById('bonusMessage').style.display = 'block';
-                    } else {
-                        document.getElementById('bonusMessage').style.display = 'none';
-                    }
-                    
-                    document.getElementById('pointModal').style.display = 'flex';
-                } else {
-                    alert(data.message || 'Error awarding points');
-                }
-            })
-            .catch(error => {
-                console.error('Error awarding points:', error);
-                alert('Error awarding points. Please try again.');
-            });
-        }
-        
-        // Close the point award modal
-        function closePointModal() {
-            document.getElementById('pointModal').style.display = 'none';
-        }
     </script>
 </body>
 </html> 

@@ -103,6 +103,11 @@ $conn->close();
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
+        /* For student view, add margin-top to container */
+        .student-view .container {
+            margin-top: 80px;
+        }
+        
         .header {
             display: flex;
             align-items: center;
@@ -267,7 +272,25 @@ $conn->close();
         }
     </style>
 </head>
-<body>
+<body class="<?php echo isset($_SESSION['user_id']) ? 'student-view' : ''; ?>">
+    <?php if (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $studentId): ?>
+    <!-- Navigation Bar for Student -->
+    <nav>
+        <ul>
+            <li><a href="home.php"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li><a href="reservations.php"><i class="fas fa-calendar-alt"></i> Reservations</a></li>
+            <li><a href="student_sit_in_records.php"><i class="fas fa-history"></i> My Records</a></li>
+            <li><a href="redeem_points.php"><i class="fas fa-star"></i> Redeem Points</a></li>
+            <li><a href="lab_schedules.php"><i class="fas fa-clock"></i> Lab Schedules</a></li>
+            <li><a href="announcements.php"><i class="fas fa-bullhorn"></i> Announcements</a></li>
+            <li><a href="edit_profile.php"><i class="fas fa-user-edit"></i> Edit Profile</a></li>
+        </ul>
+        <div class="logout-container">
+            <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </nav>
+    <?php endif; ?>
+    
     <div class="container">
         <div class="header">
             <div class="student-avatar">

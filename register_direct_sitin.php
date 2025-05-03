@@ -40,6 +40,86 @@ if (!isset($_SESSION["admin_id"])) {
     exit();
 }
 
+// Handle fetch available PCs request
+if (isset($_POST['action']) && $_POST['action'] === 'fetch_pcs') {
+    // Try to clear any output buffering
+    if (ob_get_length()) {
+        ob_clean();
+    }
+    
+    // Set content type header if not already sent
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+    }
+    
+    // Check if subject ID is provided
+    if (isset($_POST['subjectId']) && !empty($_POST['subjectId'])) {
+        $subjectId = $_POST['subjectId'];
+        
+        try {
+            // Get the total PC count for this lab from subjects table
+            $stmt = $conn->prepare("SELECT lab_number, pc_count FROM subjects WHERE id = ?");
+            $stmt->bind_param("i", $subjectId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows === 0) {
+                echo json_encode(['success' => false, 'message' => 'Subject not found']);
+                exit;
+            }
+            
+            $subject = $result->fetch_assoc();
+            $lab_number = $subject['lab_number'];
+            $total_pcs = $subject['pc_count'] ?: 50; // Default to 50 if not set
+            
+            // Get PCs that are already in use or reserved for this lab
+            $stmt = $conn->prepare("
+                SELECT pc_number 
+                FROM sit_in_requests 
+                WHERE subject_id = ? 
+                AND pc_number IS NOT NULL 
+                AND status IN ('approved', 'pending')
+                AND (end_time IS NULL OR is_active = 1)
+            ");
+            $stmt->bind_param("i", $subjectId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $occupied_pcs = [];
+            while ($row = $result->fetch_assoc()) {
+                $occupied_pcs[] = $row['pc_number'];
+            }
+            
+            // Create an array of available PCs
+            $available_pcs = [];
+            for ($i = 1; $i <= $total_pcs; $i++) {
+                if (!in_array($i, $occupied_pcs)) {
+                    $available_pcs[] = $i;
+                }
+            }
+            
+            // Return the list of available PCs
+            echo json_encode([
+                'success' => true,
+                'lab_number' => $lab_number,
+                'available_pcs' => $available_pcs,
+                'total_pcs' => $total_pcs,
+                'occupied_pcs' => $occupied_pcs
+            ]);
+            
+            $stmt->close();
+            
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        
+        exit();
+    } else {
+        echo json_encode(['success' => false, 'message' => 'No subject ID provided']);
+        exit();
+    }
+}
+
 // Handle fetch student request
 if (isset($_POST['action']) && $_POST['action'] === 'fetch') {
     // Try to clear any output buffering
@@ -123,6 +203,7 @@ if (isset($_POST['studentId']) && !empty($_POST['studentId']) &&
     $studentId = $_POST['studentId'];
     $subjectId = $_POST['subjectId'];
     $purpose = $_POST['purpose'];
+    $pc_number = isset($_POST['pc_number']) ? intval($_POST['pc_number']) : null;
     
     // First verify that student exists and has remaining sessions  
     $checkStudent = $conn->prepare("SELECT idno, remaining_sessions FROM users WHERE idno = ? AND role = 'student'");
@@ -202,15 +283,49 @@ if (isset($_POST['studentId']) && !empty($_POST['studentId']) &&
     }
     $checkRequest->close();
     
+    // Check if the selected PC is already taken (if a PC was selected)
+    if ($pc_number !== null) {
+        $pc_check_sql = "SELECT id FROM sit_in_requests 
+                         WHERE subject_id = ? AND pc_number = ? AND status IN ('pending', 'approved') 
+                         AND (is_active = 1 OR end_time IS NULL)";
+        $pc_check_stmt = $conn->prepare($pc_check_sql);
+        $pc_check_stmt->bind_param("ii", $subjectId, $pc_number);
+        $pc_check_stmt->execute();
+        $pc_check_result = $pc_check_stmt->get_result();
+        
+        if ($pc_check_result->num_rows > 0) {
+            echo '<div class="error-message">PC #' . $pc_number . ' is already taken. Please select a different PC.</div>';
+            $pc_check_stmt->close();
+            $conn->close();
+            exit();
+        }
+        $pc_check_stmt->close();
+    }
+    
+    // Get lab_number from the subjects table
+    $lab_sql = "SELECT lab_number FROM subjects WHERE id = ?";
+    $lab_stmt = $conn->prepare($lab_sql);
+    $lab_stmt->bind_param("i", $subjectId);
+    $lab_stmt->execute();
+    $lab_result = $lab_stmt->get_result();
+    
+    if ($lab_result->num_rows > 0) {
+        $row = $lab_result->fetch_assoc();
+        $lab_number = $row['lab_number'];
+    } else {
+        $lab_number = ""; // Default value if lab number is not found
+    }
+    $lab_stmt->close();
+    
     // Insert the new sit-in request with automatically approved status and set is_active to 1
-    $insertRequest = $conn->prepare("INSERT INTO sit_in_requests (student_id, subject_id, purpose, status, is_active, start_time) VALUES (?, ?, ?, 'approved', 1, NOW())");
+    $insertRequest = $conn->prepare("INSERT INTO sit_in_requests (student_id, subject_id, purpose, status, is_active, start_time, lab_number, pc_number) VALUES (?, ?, ?, 'approved', 1, NOW(), ?, ?)");
     if (!$insertRequest) {
         echo '<div class="error-message">Database error: ' . $conn->error . '</div>';
         $conn->close();
         exit();
     }
     
-    $insertRequest->bind_param("iis", $studentId, $subjectId, $purpose);
+    $insertRequest->bind_param("iissi", $studentId, $subjectId, $purpose, $lab_number, $pc_number);
     
     if ($insertRequest->execute()) {
         // Get subject details for the confirmation message
@@ -233,6 +348,7 @@ if (isset($_POST['studentId']) && !empty($_POST['studentId']) &&
             <p><strong>Course:</strong> ' . $_POST['studentCourse'] . '</p>
             <p><strong>Year:</strong> ' . $_POST['studentYear'] . '</p>
             <p><strong>Laboratory:</strong> ' . $subjectDetails['lab_number'] . '</p>
+            ' . ($pc_number ? '<p><strong>PC Number:</strong> ' . $pc_number . '</p>' : '') . '
             <p><strong>Purpose:</strong> ' . $purpose . '</p>
             <p><strong>Status:</strong> <span style="color:#28a745;font-weight:bold;">Approved and Active</span></p>
             <p><strong>Remaining Sessions:</strong> ' . $student['remaining_sessions'] . '</p>
@@ -255,4 +371,4 @@ if (isset($_POST['studentId']) && !empty($_POST['studentId']) &&
 }
 
 $conn->close();
-// No closing PHP tag to prevent accidental whitespace 
+// No closing PHP tag to prevent accidental whitespace

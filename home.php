@@ -115,6 +115,8 @@ $profile_photo = $user['photo'] ?? "uploads/default.png";
         <li><a href="home.php">Dashboard</a></li> <!-- Updated link -->
         <li><a href="reservations.php">Reservations</a></li>
         <li><a href="student_sit_in_records.php">Sit-in Records</a></li>
+        <li><a href="redeem_points.php">Redeem Points</a></li>
+        <li><a href="lab_schedules.php">View Lab Schedules</a></li>
         <li><a href="announcements.php">Announcements</a></li> <!-- Updated link -->
     </ul>
     <div class="logout-container">

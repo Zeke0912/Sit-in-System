@@ -121,12 +121,118 @@ $conn->close();
         
         body {
             font-family: 'Arial', sans-serif;
-            background-color: #f5f7fa;
+            background-color: #003f5c;
+            background-image: url('assets/bg.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
             color: #333;
             line-height: 1.6;
-            display: flex;
         }
 
+        <?php if (!$is_admin): ?>
+        /* Student Navigation Bar */
+        nav {
+            background-color: #2c3e50;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+        }
+
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+            padding: 15px 20px;
+            display: block;
+            transition: background-color 0.3s;
+        }
+
+        nav ul li a:hover, 
+        nav ul li a.active {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .logout-container a {
+            background-color: #e74c3c;
+            color: white;
+            text-decoration: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .logout-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .announcements-container {
+            max-width: 800px;
+            margin: 50px auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border-left: 5px solid #e67e22;
+        }
+        
+        .announcements-header {
+            background-color: #f9f9f9;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .announcements-header h1 {
+            color: #e67e22;
+            font-size: 24px;
+            margin: 0;
+        }
+        
+        .announcements-header h1 i {
+            margin-right: 10px;
+        }
+        
+        .announcements-list {
+            padding: 0;
+        }
+        
+        .announcement-item {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .announcement-item:last-child {
+            border-bottom: none;
+        }
+        
+        .announcement-title {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .announcement-date {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .announcement-content {
+            color: #555;
+            line-height: 1.5;
+        }
+        <?php endif; ?>
+
+        <?php if ($is_admin): ?>
         /* Left Sidebar Navigation */
         .sidebar {
             width: 250px;
@@ -418,9 +524,11 @@ $conn->close();
             color: white;
             width: 100%;
         }
+        <?php endif; ?>
 
         /* Responsive adjustments */
         @media (max-width: 992px) {
+            <?php if ($is_admin): ?>
             .sidebar {
                 transform: translateX(-250px);
                 transition: transform 0.3s ease;
@@ -447,9 +555,11 @@ $conn->close();
             body.sidebar-active .sidebar-toggle {
                 left: 265px;
             }
+            <?php endif; ?>
         }
         
         @media (max-width: 768px) {
+            <?php if (!$is_admin): ?>
             nav {
                 flex-direction: column;
                 padding: 10px 0;
@@ -473,16 +583,20 @@ $conn->close();
             .logout-container {
                 margin: 10px 0;
             }
+            <?php endif; ?>
             
+            <?php if ($is_admin): ?>
             body.sidebar-active .main-content {
                 margin-left: 0;
                 width: 100%;
             }
+            <?php endif; ?>
         }
     </style>
 </head>
 <body>
 
+<?php if ($is_admin): ?>
     <!-- Mobile Sidebar Toggle Button -->
     <button class="sidebar-toggle" id="sidebarToggle">
         <i class="fas fa-bars"></i>
@@ -495,109 +609,144 @@ $conn->close();
             <p>Admin Panel</p>
         </div>
         <div class="nav-links">
-            <?php if ($is_admin): ?>
-                <a href="admin_dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-                <a href="manage_sit_in_requests.php"><i class="fas fa-tasks"></i> Manage Requests</a>
-                <a href="todays_sit_in_records.php"><i class="fas fa-calendar-day"></i> Today's Records</a>
-                <a href="approved_sit_in_sessions.php"><i class="fas fa-history"></i> Sit in Records</a>
-                <a href="active_sitin.php"><i class="fas fa-user-clock"></i> Active Sit-ins</a>
-                <a href="add_subject.php"><i class="fas fa-book"></i> Add Subject</a>
-                <a href="announcements.php" class="active"><i class="fas fa-bullhorn"></i> Announcements</a>
-            <?php else: ?>
-                <a href="home.php"><i class="fas fa-home"></i> Dashboard</a>
-                <a href="reservations.php"><i class="fas fa-calendar-check"></i> Reservations</a>
-                <a href="announcements.php" class="active"><i class="fas fa-bullhorn"></i> Announcements</a>
-            <?php endif; ?>
+            <a href="admin_dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="manage_sit_in_requests.php"><i class="fas fa-tasks"></i> Manage Requests</a>
+            <a href="todays_sit_in_records.php"><i class="fas fa-calendar-day"></i> Today's Records</a>
+            <a href="approved_sit_in_sessions.php"><i class="fas fa-history"></i> Sit in Records</a>
+            <a href="active_sitin.php"><i class="fas fa-user-clock"></i> Active Sit-ins</a>
+            <a href="add_subject.php"><i class="fas fa-book"></i> Add Subject</a>
+            <a href="announcements.php" class="active"><i class="fas fa-bullhorn"></i> Announcements</a>
         </div>
         <div class="logout-container">
             <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </div>
+<?php else: ?>
+    <!-- Student Navigation Bar -->
+    <nav>
+        <ul>
+            <li><a href="home.php">Dashboard</a></li>
+            <li><a href="reservations.php">Reservations</a></li>
+            <li><a href="student_sit_in_records.php">Sit-in Records</a></li>
+            <li><a href="redeem_points.php">Redeem Points</a></li>
+            <li><a href="announcements.php" class="active">Announcements</a></li>
+        </ul>
+        <div class="logout-container">
+            <a href="logout.php">Logout</a>
+        </div>
+    </nav>
+<?php endif; ?>
 
-    <!-- Main Content -->
-    <div class="main-content">
-        <div class="content">
-            <?php if ($is_admin): ?>
-            <!-- Admin: Add Announcement Form -->
-            <div class="announcement-form">
-                <?php if (isset($edit_announcement)): ?>
-                    <h2><i class="fas fa-edit"></i> Edit Announcement</h2>
-                    <form method="POST" action="announcements.php">
-                        <input type="hidden" name="announcement_id" value="<?php echo $edit_announcement['id']; ?>">
-                        <div class="form-group">
-                            <label for="title">Title:</label>
-                            <input type="text" id="title" name="title" value="<?php echo htmlspecialchars($edit_announcement['title']); ?>" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="content">Content:</label>
-                            <textarea id="content" name="content" required><?php echo htmlspecialchars($edit_announcement['content']); ?></textarea>
-                        </div>
-                        <button type="submit" name="update_announcement" class="btn-submit">Update Announcement</button>
-                        <a href="announcements.php" class="btn-cancel">Cancel</a>
-                    </form>
-                <?php else: ?>
-                    <h2><i class="fas fa-bullhorn"></i> Add New Announcement</h2>
-                    <form method="POST" action="announcements.php">
-                        <div class="form-group">
-                            <label for="title">Title:</label>
-                            <input type="text" id="title" name="title" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="content">Content:</label>
-                            <textarea id="content" name="content" required></textarea>
-                        </div>
-                        <button type="submit" name="add_announcement" class="btn-submit">Post Announcement</button>
-                    </form>
-                <?php endif; ?>
-            </div>
+<?php if ($is_admin): ?>
+<!-- Admin Content -->
+<div class="main-content">
+    <div class="content">
+        <!-- Admin: Add Announcement Form -->
+        <div class="announcement-form">
+            <?php if (isset($edit_announcement)): ?>
+                <h2><i class="fas fa-edit"></i> Edit Announcement</h2>
+                <form method="POST" action="announcements.php">
+                    <input type="hidden" name="announcement_id" value="<?php echo $edit_announcement['id']; ?>">
+                    <div class="form-group">
+                        <label for="title">Title:</label>
+                        <input type="text" id="title" name="title" value="<?php echo htmlspecialchars($edit_announcement['title']); ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="content">Content:</label>
+                        <textarea id="content" name="content" required><?php echo htmlspecialchars($edit_announcement['content']); ?></textarea>
+                    </div>
+                    <button type="submit" name="update_announcement" class="btn-submit">Update Announcement</button>
+                    <a href="announcements.php" class="btn-cancel">Cancel</a>
+                </form>
+            <?php else: ?>
+                <h2><i class="fas fa-bullhorn"></i> Add New Announcement</h2>
+                <form method="POST" action="announcements.php">
+                    <div class="form-group">
+                        <label for="title">Title:</label>
+                        <input type="text" id="title" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="content">Content:</label>
+                        <textarea id="content" name="content" required></textarea>
+                    </div>
+                    <button type="submit" name="add_announcement" class="btn-submit">Post Announcement</button>
+                </form>
             <?php endif; ?>
-
-            <!-- Announcements Section -->
-            <div class="announcements-section">
-                <h2><i class="fas fa-bullhorn"></i> Announcements</h2>
-                
-                <?php if (empty($announcements)): ?>
-                    <p>No announcements available at this time.</p>
-                <?php else: ?>
-                    <?php foreach ($announcements as $announcement): ?>
-                        <div class="announcement">
-                            <h3><?php echo htmlspecialchars($announcement['title']); ?></h3>
-                            <span class="announcement-date">
-                                <i class="far fa-calendar-alt"></i> <?php echo date('F d, Y', strtotime($announcement['date'])); ?>
-                            </span>
-                            <div class="announcement-content">
-                                <?php echo nl2br(htmlspecialchars($announcement['content'])); ?>
-                            </div>
-                            
-                            <?php if ($is_admin): ?>
-                                <div class="admin-actions">
-                                    <a href="announcements.php?edit=<?php echo $announcement['id']; ?>" class="edit-btn">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="announcements.php?delete=<?php echo $announcement['id']; ?>" 
-                                    class="delete-btn" 
-                                    onclick="return confirm('Are you sure you want to delete this announcement?');">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </a>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
         </div>
 
+        <!-- Announcements Section -->
+        <div class="announcements-section">
+            <h2><i class="fas fa-bullhorn"></i> Announcements</h2>
+            
+            <?php if (empty($announcements)): ?>
+                <p>No announcements available at this time.</p>
+            <?php else: ?>
+                <?php foreach ($announcements as $announcement): ?>
+                    <div class="announcement">
+                        <h3><?php echo htmlspecialchars($announcement['title']); ?></h3>
+                        <span class="announcement-date">
+                            <i class="far fa-calendar-alt"></i> <?php echo date('F d, Y', strtotime($announcement['date'])); ?>
+                        </span>
+                        <div class="announcement-content">
+                            <?php echo nl2br(htmlspecialchars($announcement['content'])); ?>
+                        </div>
+                        
+                        <div class="admin-actions">
+                            <a href="announcements.php?edit=<?php echo $announcement['id']; ?>" class="edit-btn">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="announcements.php?delete=<?php echo $announcement['id']; ?>" 
+                            class="delete-btn" 
+                            onclick="return confirm('Are you sure you want to delete this announcement?');">
+                                <i class="fas fa-trash-alt"></i>
+                            </a>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+        
         <footer>
             &copy; <?php echo date("Y"); ?> Sit-in Monitoring System
         </footer>
     </div>
+</div>
+<?php else: ?>
+<!-- Student Content -->
+<div class="announcements-container">
+    <div class="announcements-header">
+        <h1><i class="fas fa-bullhorn"></i> Announcements</h1>
+    </div>
+    <div class="announcements-list">
+        <?php if (empty($announcements)): ?>
+            <div class="announcement-item">
+                <p>No announcements available at this time.</p>
+            </div>
+        <?php else: ?>
+            <?php foreach ($announcements as $announcement): ?>
+                <div class="announcement-item">
+                    <div class="announcement-title"><?php echo htmlspecialchars($announcement['title']); ?></div>
+                    <span class="announcement-date">
+                        <i class="far fa-calendar-alt"></i> <?php echo date('F d, Y', strtotime($announcement['date'])); ?>
+                    </span>
+                    <div class="announcement-content">
+                        <?php echo nl2br(htmlspecialchars($announcement['content'])); ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
 
-    <script>
-        // Sidebar Toggle Functionality
-        document.getElementById('sidebarToggle').addEventListener('click', function() {
-            document.getElementById('sidebar').classList.toggle('active');
-            document.body.classList.toggle('sidebar-active');
-        });
-    </script>
+<script>
+    <?php if ($is_admin): ?>
+    // Sidebar Toggle Functionality
+    document.getElementById('sidebarToggle').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('active');
+        document.body.classList.toggle('sidebar-active');
+    });
+    <?php endif; ?>
+</script>
 </body>
 </html>

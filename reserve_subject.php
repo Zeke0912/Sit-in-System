@@ -26,9 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $subject_id = intval($_POST['subject_id']);
         $student_id = intval($_POST['student_id']);
         $feedback = isset($_POST['feedback']) ? $_POST['feedback'] : "";  // Optional feedback from the student
+        $pc_number = isset($_POST['pc_number']) ? intval($_POST['pc_number']) : null;  // Get PC number if provided
 
         // Debug: Print the data
-        error_log("Subject ID: $subject_id, Student ID: $student_id, Feedback: $feedback");
+        error_log("Subject ID: $subject_id, Student ID: $student_id, Feedback: $feedback, PC Number: $pc_number");
 
         // First, check if a request already exists for this student and subject
         $check_sql = "SELECT status FROM sit_in_requests WHERE student_id = ? AND subject_id = ?";
@@ -62,11 +63,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         $lab_stmt->close();
 
-        // Insert the sit-in request in the sit_in_requests table with the lab_number
-        $sql_request = "INSERT INTO sit_in_requests (student_id, subject_id, lab_number, purpose, status, feedback) 
-                        VALUES (?, ?, ?, 'Sit-in Session', 'pending', ?)";
+        // Check if the selected PC is already taken
+        if ($pc_number !== null) {
+            $pc_check_sql = "SELECT id FROM sit_in_requests 
+                             WHERE subject_id = ? AND pc_number = ? AND status IN ('pending', 'approved') 
+                             AND (is_active = 1 OR end_time IS NULL)";
+            $pc_check_stmt = $conn->prepare($pc_check_sql);
+            $pc_check_stmt->bind_param("ii", $subject_id, $pc_number);
+            $pc_check_stmt->execute();
+            $pc_check_result = $pc_check_stmt->get_result();
+            
+            if ($pc_check_result->num_rows > 0) {
+                echo "pc_taken";  // PC is already reserved/in use
+                $pc_check_stmt->close();
+                $conn->close();
+                exit();
+            }
+            $pc_check_stmt->close();
+        }
+
+        // Insert the sit-in request in the sit_in_requests table with the lab_number and pc_number
+        $sql_request = "INSERT INTO sit_in_requests (student_id, subject_id, lab_number, pc_number, purpose, status, feedback) 
+                        VALUES (?, ?, ?, ?, 'Sit-in Session', 'pending', ?)";
         $stmt_request = $conn->prepare($sql_request);
-        $stmt_request->bind_param("iiss", $student_id, $subject_id, $lab_number, $feedback);
+        $stmt_request->bind_param("iisis", $student_id, $subject_id, $lab_number, $pc_number, $feedback);
         
         if ($stmt_request->execute()) {
             // Update the status of the subject to 'pending'

@@ -259,6 +259,128 @@ if (isset($_POST['end_session']) && isset($_POST['request_id'])) {
             background-color: #c0392b;
         }
         
+        /* Points System Styles */
+        .points-control {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 0;
+        }
+        
+        .points-input {
+            width: 60px;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .award-btn {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .award-btn:hover {
+            background-color: #2ecc71;
+        }
+        
+        .end-with-points-btn {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .end-with-points-btn:hover {
+            background-color: #2ecc71;
+        }
+        
+        .points-control.awarded .end-with-points-btn {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        .points-display {
+            background-color: #3498db;
+            color: white;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        /* Point Award Modal */
+        .point-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1010;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .point-modal-content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+        
+        .point-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .point-message {
+            font-size: 16px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .point-award {
+            font-weight: bold;
+            color: #27ae60;
+        }
+        
+        .point-modal-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .point-modal-btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .action-cell {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        
         .no-sessions {
             padding: 30px;
             background-color: white;
@@ -393,7 +515,7 @@ if (isset($_POST['end_session']) && isset($_POST['request_id'])) {
             
             <?php
             // Fetch active sit-in sessions
-            $sql = "SELECT r.id, r.student_id, r.subject_id, r.purpose, r.start_time,
+            $sql = "SELECT r.id, r.student_id, r.subject_id, r.purpose, r.start_time, r.pc_number,
                     u.firstname, u.lastname, u.course, u.year, u.remaining_sessions,
                     s.lab_number
                     FROM sit_in_requests r
@@ -413,6 +535,7 @@ if (isset($_POST['end_session']) && isset($_POST['request_id'])) {
                             <th>Course</th>
                             <th>Year</th>
                             <th>Lab</th>
+                            <th>PC#</th>
                             <th>Purpose</th>
                             <th>Start Time</th>
                             <th>Remaining Sessions</th>
@@ -428,11 +551,15 @@ if (isset($_POST['end_session']) && isset($_POST['request_id'])) {
                         <td>' . $row['course'] . '</td>
                         <td>' . $row['year'] . '</td>
                         <td>' . $row['lab_number'] . '</td>
+                        <td>' . ($row['pc_number'] ? $row['pc_number'] : 'N/A') . '</td>
                         <td>' . $row['purpose'] . '</td>
                         <td>' . date('M d, Y g:i A', strtotime($row['start_time'])) . '</td>
                         <td>' . $row['remaining_sessions'] . '</td>
-                        <td>
-                            <form method="post" onsubmit="return confirm(\'Are you sure you want to end this session?\');">
+                        <td class="action-cell">
+                            <div class="points-control" data-student="' . $row['student_id'] . '" data-session="' . $row['id'] . '">
+                                <button class="end-with-points-btn" title="End session and award 1 point">End with Points</button>
+                            </div>
+                            <form method="post" onsubmit="return confirm(\'Are you sure you want to end this session?\');" style="margin: 0;">
                                 <input type="hidden" name="request_id" value="' . $row['id'] . '">
                                 <button type="submit" name="end_session" class="end-btn">End Session</button>
                             </form>
@@ -452,12 +579,165 @@ if (isset($_POST['end_session']) && isset($_POST['request_id'])) {
         </footer>
     </div>
 
+    <!-- Point Award Modal -->
+    <div class="point-modal" id="pointModal">
+        <div class="point-modal-content">
+            <div class="point-icon">
+                <i class="fas fa-award" style="color: #f1c40f;"></i>
+            </div>
+            <div class="point-message">
+                You've awarded <span id="pointsAwarded" class="point-award">3</span> points to student
+                <span id="studentName" class="point-award">John Doe</span>!
+                <div id="bonusMessage" style="margin-top: 10px; display: none;">
+                    <i class="fas fa-plus-circle" style="color: #27ae60;"></i> 
+                    Student has accumulated 3+ points and earned an extra session!
+                </div>
+            </div>
+            <button class="point-modal-btn" onclick="closePointModal()">Close</button>
+        </div>
+    </div>
+
     <script>
         // Sidebar Toggle Functionality
         document.getElementById('sidebarToggle').addEventListener('click', function() {
             document.getElementById('sidebar').classList.toggle('active');
             document.body.classList.toggle('sidebar-active');
         });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load existing points
+            loadStudentPoints();
+            
+            // Add event listeners to end with points buttons
+            const pointsBtns = document.querySelectorAll('.end-with-points-btn');
+            pointsBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const control = this.parentElement;
+                    const studentId = control.dataset.student;
+                    const sessionId = control.dataset.session;
+                    
+                    // Confirm before awarding point and ending session
+                    if (confirm('Are you sure you want to end this session and award 1 point?')) {
+                        // Award 1 point and end session
+                        awardPointAndEndSession(studentId, sessionId);
+                    }
+                });
+            });
+        });
+        
+        // Load existing points for students
+        function loadStudentPoints() {
+            // AJAX request to get existing points
+            fetch('get_student_points.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        data.points.forEach(item => {
+                            const control = document.querySelector(`.points-control[data-student="${item.student_id}"][data-session="${item.session_id}"]`);
+                            if (control) {
+                                // Replace button with points display
+                                control.innerHTML = `
+                                    <div class="points-display">1 point awarded</div>
+                                `;
+                                control.classList.add('awarded');
+                            }
+                        });
+                    }
+                })
+                .catch(error => console.error('Error loading student points:', error));
+        }
+        
+        // Award 1 point to a student and end the session
+        function awardPointAndEndSession(studentId, sessionId) {
+            // First award the point
+            const formData = new FormData();
+            formData.append('student_id', studentId);
+            formData.append('session_id', sessionId);
+            formData.append('points', 1); // Always 1 point
+            
+            fetch('award_points.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update UI to show point awarded
+                    const control = document.querySelector(`.points-control[data-student="${studentId}"][data-session="${sessionId}"]`);
+                    if (control) {
+                        control.innerHTML = `
+                            <div class="points-display">1 point awarded</div>
+                        `;
+                        control.classList.add('awarded');
+                    }
+                    
+                    // Show award modal
+                    document.getElementById('pointsAwarded').textContent = "1";
+                    document.getElementById('studentName').textContent = data.student_name || studentId;
+                    
+                    // Enhanced bonus message
+                    if (data.bonus_awarded) {
+                        let bonusMessage = `Student has accumulated enough points and earned ${data.bonus_sessions} additional session(s)!`;
+                        if (data.bonus_sessions < Math.floor(data.available_points / 3)) {
+                            bonusMessage += `<br><span style="font-size: 0.9em; color: #e67e22;">(Max 30 sessions cap reached)</span>`;
+                        }
+                        document.getElementById('bonusMessage').innerHTML = `
+                            <i class="fas fa-plus-circle" style="color: #27ae60;"></i> 
+                            ${bonusMessage}
+                        `;
+                        document.getElementById('bonusMessage').style.display = 'block';
+                    } else {
+                        document.getElementById('bonusMessage').style.display = 'none';
+                    }
+                    
+                    // Show modal
+                    document.getElementById('pointModal').style.display = 'flex';
+                    
+                    // Now end the session
+                    endSession(sessionId);
+                } else {
+                    alert(data.message || 'Error awarding point');
+                }
+            })
+            .catch(error => {
+                console.error('Error awarding point:', error);
+                alert('Error awarding point. Please try again.');
+            });
+        }
+        
+        // End the session using AJAX
+        function endSession(sessionId) {
+            const formData = new FormData();
+            formData.append('request_id', sessionId);
+            formData.append('end_session', 'true');
+            
+            fetch('active_sitin.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Reload the page after a short delay to show the modal first
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 3000);
+                }
+            })
+            .catch(error => {
+                console.error('Error ending session:', error);
+                // Still reload the page to reflect current state
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
+            });
+        }
+        
+        // Close the point award modal
+        function closePointModal() {
+            document.getElementById('pointModal').style.display = 'none';
+            // Reload page after closing modal to reflect updated state
+            window.location.reload();
+        }
     </script>
 </body>
 </html> 

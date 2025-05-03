@@ -135,19 +135,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <html lang="en">
 <head>
     <title>Edit Profile</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <style>
         body {
             font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+        }
+
+        .container {
             max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
+            margin: 80px auto 20px;
+            padding: 0 20px;
         }
 
         .edit-profile-container {
-            background: #f9f9f9;
+            background: #fff;
             padding: 25px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-top: 80px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .tab-nav {
@@ -246,6 +260,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </style>
 </head>
 <body>
+    <!-- Navigation Bar -->
+    <nav>
+        <ul>
+            <li><a href="home.php"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li><a href="reservations.php"><i class="fas fa-calendar-alt"></i> Reservations</a></li>
+            <li><a href="student_sit_in_records.php"><i class="fas fa-history"></i> My Records</a></li>
+            <li><a href="redeem_points.php"><i class="fas fa-star"></i> Redeem Points</a></li>
+            <li><a href="lab_schedules.php"><i class="fas fa-clock"></i> Lab Schedules</a></li>
+            <li><a href="announcements.php"><i class="fas fa-bullhorn"></i> Announcements</a></li>
+            <li><a href="edit_profile.php" class="active"><i class="fas fa-user-edit"></i> Edit Profile</a></li>
+        </ul>
+        <div class="logout-container">
+            <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </nav>
+
     <div class="edit-profile-container">
         <h2>Edit Profile</h2>
         
