@@ -26,6 +26,9 @@ $labFilter = isset($_GET['lab']) ? $conn->real_escape_string($_GET['lab']) : '';
 // Get purpose filter
 $purposeFilter = isset($_GET['purpose']) ? $conn->real_escape_string($_GET['purpose']) : '';
 
+// Get status filter
+$statusFilter = isset($_GET['status']) ? $conn->real_escape_string($_GET['status']) : '';
+
 // Search condition
 $searchCondition = '';
 if (!empty($filterDate)) {
@@ -40,6 +43,11 @@ if (!empty($labFilter)) {
 // Apply purpose filter if selected
 if (!empty($purposeFilter)) {
     $searchCondition .= " AND r.purpose = '$purposeFilter'";
+}
+
+// Apply status filter if selected
+if (!empty($statusFilter)) {
+    $searchCondition .= " AND r.status = '$statusFilter'";
 }
 
 // Get filter parameter
@@ -71,15 +79,15 @@ if ($purposesResult && $purposesResult->num_rows > 0) {
     }
 }
 
-// Fetch completed sit-in sessions
+// Fetch sit-in sessions (all statuses)
 $sql = "SELECT r.id, r.student_id, r.subject_id, r.purpose, r.start_time, r.end_time,
         u.firstname, u.lastname, u.course, u.year,
-        s.subject_name, s.lab_number
+        s.subject_name, s.lab_number, r.status, r.is_active
         FROM sit_in_requests r
         JOIN users u ON r.student_id = u.idno
         JOIN subjects s ON r.subject_id = s.id
-        WHERE r.is_active = 0" . $searchCondition . "
-        ORDER BY r.end_time DESC";
+        WHERE 1=1" . $searchCondition . "
+        ORDER BY r.start_time DESC";
 
 $result = $conn->query($sql);
 ?>
@@ -497,6 +505,15 @@ $result = $conn->query($sql);
                         ?>
                     </select>
                 </div>
+                <div class="filter-group">
+                    <label for="status-filter">Status:</label>
+                    <select id="status-filter" name="status" onchange="applyStatusFilter()">
+                        <option value="">All Statuses</option>
+                        <option value="approved" <?php echo $statusFilter == 'approved' ? 'selected' : ''; ?>>Approved</option>
+                        <option value="rejected" <?php echo $statusFilter == 'rejected' ? 'selected' : ''; ?>>Rejected</option>
+                        <option value="pending" <?php echo $statusFilter == 'pending' ? 'selected' : ''; ?>>Pending</option>
+                    </select>
+                </div>
             <div class="date-control">
                 <input type="date" id="report-date" value="<?php echo $filterDate; ?>">
                     <div class="buttons">
@@ -530,6 +547,7 @@ $result = $conn->query($sql);
                         <th>Login</th>
                         <th>Logout</th>
                         <th>Date</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -538,8 +556,22 @@ $result = $conn->query($sql);
                         while($row = $result->fetch_assoc()) {
                             $fullName = $row['firstname'] . ' ' . $row['lastname'];
                             $startTime = date('h:i:sa', strtotime($row['start_time']));
-                            $endTime = date('h:i:sa', strtotime($row['end_time']));
-                            $date = date('Y-m-d', strtotime($row['end_time']));
+                            $endTime = $row['end_time'] ? date('h:i:sa', strtotime($row['end_time'])) : 'N/A';
+                            $date = date('Y-m-d', strtotime($row['start_time']));
+                            
+                            // Format status
+                            $statusText = '';
+                            if ($row['is_active'] == 1 && $row['status'] == 'approved') {
+                                $statusText = '<span style="color: #27ae60; font-weight: bold;">Active</span>';
+                            } elseif ($row['status'] == 'approved' && $row['is_active'] == 0) {
+                                $statusText = '<span style="color: #3498db; font-weight: bold;">Completed</span>';
+                            } elseif ($row['status'] == 'rejected') {
+                                $statusText = '<span style="color: #e74c3c; font-weight: bold;">Rejected</span>';
+                            } elseif ($row['status'] == 'pending') {
+                                $statusText = '<span style="color: #f39c12; font-weight: bold;">Pending</span>';
+                            } else {
+                                $statusText = $row['status'];
+                            }
                             
                             echo "<tr>
                                 <td>{$row['student_id']}</td>
@@ -549,10 +581,11 @@ $result = $conn->query($sql);
                                 <td>{$startTime}</td>
                                 <td>{$endTime}</td>
                                 <td>{$date}</td>
+                                <td>{$statusText}</td>
                             </tr>";
                         }
                     } else {
-                        echo "<tr><td colspan='7' style='text-align:center;'>No records found</td></tr>";
+                        echo "<tr><td colspan='8' style='text-align:center;'>No records found</td></tr>";
                     }
                     ?>
                 </tbody>
@@ -591,6 +624,12 @@ $result = $conn->query($sql);
             if (purposeValue) {
                 document.getElementById('purpose-filter').value = purposeValue;
             }
+            
+            // Set status filter if in URL
+            const statusValue = urlParams.get('status');
+            if (statusValue) {
+                document.getElementById('status-filter').value = statusValue;
+            }
         };
         
         // Apply lab filter
@@ -599,8 +638,9 @@ $result = $conn->query($sql);
             const dateValue = document.getElementById('report-date').value;
             const filterValue = document.getElementById('filter-input').value.trim();
             const purposeValue = document.getElementById('purpose-filter').value;
+            const statusValue = document.getElementById('status-filter').value;
             
-            window.location.href = `reports.php?date=${dateValue}&filter=${encodeURIComponent(filterValue)}&lab=${encodeURIComponent(labValue)}&purpose=${encodeURIComponent(purposeValue)}`;
+            window.location.href = `reports.php?date=${dateValue}&filter=${encodeURIComponent(filterValue)}&lab=${encodeURIComponent(labValue)}&purpose=${encodeURIComponent(purposeValue)}&status=${encodeURIComponent(statusValue)}`;
         }
         
         // Apply purpose filter
@@ -609,18 +649,31 @@ $result = $conn->query($sql);
             const dateValue = document.getElementById('report-date').value;
             const filterValue = document.getElementById('filter-input').value.trim();
             const labValue = document.getElementById('lab-filter').value;
+            const statusValue = document.getElementById('status-filter').value;
             
-            window.location.href = `reports.php?date=${dateValue}&filter=${encodeURIComponent(filterValue)}&lab=${encodeURIComponent(labValue)}&purpose=${encodeURIComponent(purposeValue)}`;
+            window.location.href = `reports.php?date=${dateValue}&filter=${encodeURIComponent(filterValue)}&lab=${encodeURIComponent(labValue)}&purpose=${encodeURIComponent(purposeValue)}&status=${encodeURIComponent(statusValue)}`;
         }
         
-        // Search by date (updated to keep lab and purpose filters)
-        function searchByDate() {
+        // Apply status filter
+        function applyStatusFilter() {
+            const statusValue = document.getElementById('status-filter').value;
             const dateValue = document.getElementById('report-date').value;
             const filterValue = document.getElementById('filter-input').value.trim();
             const labValue = document.getElementById('lab-filter').value;
             const purposeValue = document.getElementById('purpose-filter').value;
             
-            window.location.href = `reports.php?date=${dateValue}&filter=${encodeURIComponent(filterValue)}&lab=${encodeURIComponent(labValue)}&purpose=${encodeURIComponent(purposeValue)}`;
+            window.location.href = `reports.php?date=${dateValue}&filter=${encodeURIComponent(filterValue)}&lab=${encodeURIComponent(labValue)}&purpose=${encodeURIComponent(purposeValue)}&status=${encodeURIComponent(statusValue)}`;
+        }
+        
+        // Search by date (updated to keep lab, purpose, and status filters)
+        function searchByDate() {
+            const dateValue = document.getElementById('report-date').value;
+            const filterValue = document.getElementById('filter-input').value.trim();
+            const labValue = document.getElementById('lab-filter').value;
+            const purposeValue = document.getElementById('purpose-filter').value;
+            const statusValue = document.getElementById('status-filter').value;
+            
+            window.location.href = `reports.php?date=${dateValue}&filter=${encodeURIComponent(filterValue)}&lab=${encodeURIComponent(labValue)}&purpose=${encodeURIComponent(purposeValue)}&status=${encodeURIComponent(statusValue)}`;
         }
         
         // Reset filters
@@ -628,15 +681,16 @@ $result = $conn->query($sql);
             window.location.href = 'reports.php';
         }
         
-        // Filter functionality (updated to keep lab and purpose filters)
+        // Filter functionality (updated to keep lab, purpose, and status filters)
         document.getElementById('filter-input').addEventListener('keyup', function(e) {
             if (e.key === 'Enter') {
                 const filterValue = this.value.trim();
                 const dateValue = document.getElementById('report-date').value;
                 const labValue = document.getElementById('lab-filter').value;
                 const purposeValue = document.getElementById('purpose-filter').value;
+                const statusValue = document.getElementById('status-filter').value;
                 
-                window.location.href = `reports.php?date=${dateValue}&filter=${encodeURIComponent(filterValue)}&lab=${encodeURIComponent(labValue)}&purpose=${encodeURIComponent(purposeValue)}`;
+                window.location.href = `reports.php?date=${dateValue}&filter=${encodeURIComponent(filterValue)}&lab=${encodeURIComponent(labValue)}&purpose=${encodeURIComponent(purposeValue)}&status=${encodeURIComponent(statusValue)}`;
             }
         });
         
@@ -701,8 +755,9 @@ $result = $conn->query($sql);
             const filterInput = document.getElementById('filter-input').value;
             const labFilter = document.getElementById('lab-filter').value;
             const purposeFilter = document.getElementById('purpose-filter').value;
+            const statusFilter = document.getElementById('status-filter').value;
             
-            if (dateFilter || filterInput || labFilter || purposeFilter) {
+            if (dateFilter || filterInput || labFilter || purposeFilter || statusFilter) {
                 if (dateFilter) {
                     doc.text(`Date: ${dateFilter}`, 40, startY);
                     startY += 15;
@@ -721,6 +776,12 @@ $result = $conn->query($sql);
                     const purposeElement = document.getElementById('purpose-filter');
                     const purposeText = purposeElement.options[purposeElement.selectedIndex].text;
                     doc.text(`Purpose: ${purposeText}`, 40, startY);
+                    startY += 15;
+                }
+                if (statusFilter) {
+                    const statusElement = document.getElementById('status-filter');
+                    const statusText = statusElement.options[statusElement.selectedIndex].text;
+                    doc.text(`Status: ${statusText}`, 40, startY);
                     startY += 15;
                 }
             }
@@ -782,8 +843,9 @@ $result = $conn->query($sql);
             const filterInput = document.getElementById('filter-input').value;
             const labFilter = document.getElementById('lab-filter').value;
             const purposeFilter = document.getElementById('purpose-filter').value;
+            const statusFilter = document.getElementById('status-filter').value;
             
-            if (dateFilter || filterInput || labFilter || purposeFilter) {
+            if (dateFilter || filterInput || labFilter || purposeFilter || statusFilter) {
                 content += `<div style="margin: 15px 0; text-align: center;">`;
                 if (dateFilter) {
                     content += `<p><strong>Date:</strong> ${dateFilter}</p>`;
@@ -801,6 +863,11 @@ $result = $conn->query($sql);
                     const purposeText = purposeElement.options[purposeElement.selectedIndex].text;
                     content += `<p><strong>Purpose:</strong> ${purposeText}</p>`;
                 }
+                if (statusFilter) {
+                    const statusElement = document.getElementById('status-filter');
+                    const statusText = statusElement.options[statusElement.selectedIndex].text;
+                    content += `<p><strong>Status:</strong> ${statusText}</p>`;
+                }
                 content += `</div>`;
             }
             
@@ -815,6 +882,7 @@ $result = $conn->query($sql);
                         <th>Login</th>
                         <th>Logout</th>
                         <th>Date</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>

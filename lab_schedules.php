@@ -66,7 +66,7 @@ $purposes = ['Java', 'PHP', 'ASP.NET', 'C#', 'Python', 'C Programming',
     'System Integration & Architecture', 'Computer Application',
     'Project Management', 'IT Trends', 'Technopreneurship', 'Capstone', 'Other'];
 
-// Also try to get purposes from database as backup
+// For reference only, we won't use these to override the hardcoded list
 $db_purposes = [];
 $purpose_query = "SELECT DISTINCT purpose FROM sit_in_requests WHERE purpose IS NOT NULL AND purpose != '' ORDER BY purpose";
 $purpose_result = $conn->query($purpose_query);
@@ -78,10 +78,10 @@ if ($purpose_result && $purpose_result->num_rows > 0) {
         }
     }
     
-    // Only use database purposes if we found a significant number
-    if (count($db_purposes) > 5) {
-        $purposes = $db_purposes;
-    }
+    // Comment out the override code to ensure we always use the hardcoded list
+    // if (count($db_purposes) > 5) {
+    //     $purposes = $db_purposes;
+    // }
 }
 
 // Process sit-in request
@@ -108,6 +108,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_sitin'])) {
 function format_time($time) {
     return date('h:i A', strtotime($time));
 }
+
+// Add a cache-busting parameter to ensure fresh data
+$cache_buster = time();
 ?>
 
 <!DOCTYPE html>
@@ -118,6 +121,10 @@ function format_time($time) {
     <title>Laboratory Schedule</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Add meta to prevent caching -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <style>
         :root {
             --primary: #4361ee;
@@ -133,6 +140,10 @@ function format_time($time) {
         
         body {
             background-color: #f8f9fa;
+            background-image: url('ucmain.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #333;
             line-height: 1.6;

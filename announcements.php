@@ -611,8 +611,8 @@ $conn->close();
         <div class="nav-links">
             <a href="admin_dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
             <a href="manage_sit_in_requests.php"><i class="fas fa-tasks"></i> Manage Requests</a>
-            <a href="todays_sit_in_records.php"><i class="fas fa-calendar-day"></i> Today's Records</a>
-            <a href="approved_sit_in_sessions.php"><i class="fas fa-history"></i> Sit in Records</a>
+            <a href="todays_sit_in_records.php"><i class="fas fa-clipboard-list"></i> Today's Records</a>
+            <a href="reports.php"><i class="fas fa-chart-bar"></i> Sit-in Reports</a>
             <a href="active_sitin.php"><i class="fas fa-user-clock"></i> Active Sit-ins</a>
             <a href="add_subject.php"><i class="fas fa-book"></i> Add Subject</a>
             <a href="announcements.php" class="active"><i class="fas fa-bullhorn"></i> Announcements</a>

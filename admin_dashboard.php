@@ -657,13 +657,16 @@ if ($topPerformersResult && $topPerformersResult->num_rows > 0) {
         </div>
         <div class="nav-links">
             <a href="admin_dashboard.php" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="computer_control.php"><i class="fas fa-desktop"></i> Computer Control</a>
             <a href="manage_sit_in_requests.php"><i class="fas fa-tasks"></i> Manage Requests</a>
-            <a href="todays_sit_in_records.php"><i class="fas fa-calendar-day"></i> Today's Records</a>
-            <a href="approved_sit_in_sessions.php"><i class="fas fa-history"></i> Sit in Records</a>
-            <a href="active_sitin.php"><i class="fas fa-user-clock"></i> Active Sit-ins</a>
+            <a href="active_sitin.php"><i class="fas fa-tasks"></i> Active Sit-ins</a>
+            <a href="todays_sit_in_records.php"><i class="fas fa-clipboard-list"></i> Today's Records</a>
+            <a href="reports.php"><i class="fas fa-chart-bar"></i> Sit-in Reports</a>
+            <a href="feedback_reports.php"><i class="fas fa-comments"></i> Feedback Reports</a>
             <a href="add_subject.php"><i class="fas fa-book"></i> Add Subject</a>
             <a href="announcements.php"><i class="fas fa-bullhorn"></i> Announcements</a>
             <a href="lab_schedules_admin.php"><i class="fas fa-calendar-alt"></i> Lab Schedules</a>
+            <a href="admin_resources.php"><i class="fas fa-book-open"></i> Resources</a>
             <a href="#" id="searchBtn"><i class="fas fa-search"></i> Search</a>
             <a href="#" id="sitInBtn"><i class="fas fa-sign-in-alt"></i> Register Sit-in</a>
             <a href="#" id="studentsBtn"><i class="fas fa-users"></i> Students</a>
@@ -769,7 +772,7 @@ if ($topPerformersResult && $topPerformersResult->num_rows > 0) {
                     <!-- Most Active Students -->
                     <div style="flex: 1; min-width: 300px; max-width: 600px; background: white; border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); padding: 20px;">
                         <h3 style="color: #3498db; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; font-size: 18px;">
-                            <i class="fas fa-trophy" style="color: gold; margin-right: 10px;"></i>Most Active Participants
+                            <i class="fas fa-trophy" style="color: gold; margin-right: 10px;"></i>Most Active Students
                         </h3>
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
@@ -810,7 +813,7 @@ if ($topPerformersResult && $topPerformersResult->num_rows > 0) {
                     <!-- Top Performing Students (by hours spent) -->
                     <div style="flex: 1; min-width: 300px; max-width: 600px; background: white; border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); padding: 20px;">
                         <h3 style="color: #3498db; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; font-size: 18px;">
-                            <i class="fas fa-star" style="color: #f1c40f; margin-right: 10px;"></i>Top Hours Logged
+                            <i class="fas fa-star" style="color: #f1c40f; margin-right: 10px;"></i>Top Performing Students
                         </h3>
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>

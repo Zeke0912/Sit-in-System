@@ -81,7 +81,7 @@ $purposes = [
     'Project Management', 'IT Trends', 'Technopreneurship', 'Capstone', 'Other'
 ];
 
-// Also try to get from database as backup
+// For reference only, we won't use these to override the hardcoded list
 $db_purposes = [];
 $purpose_query = "SELECT DISTINCT purpose FROM sit_in_requests WHERE purpose IS NOT NULL AND purpose != '' ORDER BY purpose";
 $purpose_result = $conn->query($purpose_query);
@@ -93,10 +93,10 @@ if ($purpose_result && $purpose_result->num_rows > 0) {
         }
     }
     
-    // Only use database purposes if we actually found some
-    if (count($db_purposes) > 5) {
-        $purposes = $db_purposes;
-    }
+    // Comment out the override code to ensure we always use the hardcoded list
+    // if (count($db_purposes) > 5) {
+    //     $purposes = $db_purposes;
+    // }
 }
 
 // Handle adding new schedule
@@ -196,6 +196,127 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_schedule'])) {
     }
 }
 
+// Handle reset all schedules
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_all_schedules'])) {
+    $lab_number = $_POST['lab_number'];
+    
+    // Get the actual schedules first (non-placeholders)
+    $actual_schedules_query = "SELECT COUNT(*) as count FROM subjects 
+                              WHERE lab_number = ? 
+                              AND NOT (subject_name = 'Available' AND start_time = '00:00:00')";
+    $actual_stmt = $conn->prepare($actual_schedules_query);
+    $actual_stmt->bind_param("s", $lab_number);
+    $actual_stmt->execute();
+    $actual_result = $actual_stmt->get_result();
+    $actual_data = $actual_result->fetch_assoc();
+    
+    if ($actual_data['count'] > 0) {
+        // Delete all schedules for this lab except placeholders
+        $delete_query = "DELETE FROM subjects WHERE lab_number = ? AND NOT (subject_name = 'Available' AND start_time = '00:00:00')";
+        $delete_stmt = $conn->prepare($delete_query);
+        $delete_stmt->bind_param("s", $lab_number);
+        
+        if ($delete_stmt->execute()) {
+            // Check if we already have a placeholder
+            $placeholder_query = "SELECT COUNT(*) as count FROM subjects 
+                                WHERE lab_number = ? 
+                                AND subject_name = 'Available' 
+                                AND start_time = '00:00:00'";
+            $placeholder_stmt = $conn->prepare($placeholder_query);
+            $placeholder_stmt->bind_param("s", $lab_number);
+            $placeholder_stmt->execute();
+            $placeholder_result = $placeholder_stmt->get_result();
+            $placeholder_row = $placeholder_result->fetch_assoc();
+            
+            // Only add placeholder if none exists
+            if ($placeholder_row['count'] == 0) {
+                // Add a placeholder record to keep the lab in the system
+                $placeholder_insert = "INSERT INTO subjects 
+                                    (subject_name, lab_number, date, start_time, end_time, instructor_id, sessions, status) 
+                                    VALUES ('Available', ?, CURDATE(), '00:00:00', '00:00:00', 0, 0, 'available')";
+                $placeholder_stmt = $conn->prepare($placeholder_insert);
+                $placeholder_stmt->bind_param("s", $lab_number);
+                $placeholder_stmt->execute();
+            }
+            
+            $success_message = "All schedules for Laboratory " . htmlspecialchars($lab_number) . " have been reset successfully!";
+            
+            // Redirect to clear POST and show the updated schedule
+            header("Location: lab_schedules_admin.php?lab=" . urlencode($lab_number) . "&success=" . urlencode($success_message));
+            exit();
+        } else {
+            $error_message = "Error resetting schedules: " . $conn->error;
+        }
+    } else {
+        $success_message = "No schedules to reset for Laboratory " . htmlspecialchars($lab_number) . ".";
+        
+        // Redirect to clear POST
+        header("Location: lab_schedules_admin.php?lab=" . urlencode($lab_number) . "&success=" . urlencode($success_message));
+        exit();
+    }
+}
+
+// Handle edit schedule
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_schedule'])) {
+    $schedule_id = $_POST['schedule_id'];
+    
+    // Get schedule details for editing
+    $edit_query = "SELECT s.id, s.subject_name, s.lab_number, s.date, s.start_time, s.end_time, s.instructor_id
+                  FROM subjects s 
+                  WHERE s.id = ?";
+    $edit_stmt = $conn->prepare($edit_query);
+    $edit_stmt->bind_param("i", $schedule_id);
+    $edit_stmt->execute();
+    $edit_result = $edit_stmt->get_result();
+    
+    if ($row = $edit_result->fetch_assoc()) {
+        // Store in session for form prefill
+        $_SESSION['edit_schedule'] = $row;
+        $_SESSION['edit_schedule']['day'] = date('l', strtotime($row['date']));
+        
+        // Redirect to the same page to prevent form resubmission
+        header("Location: lab_schedules_admin.php?lab=" . urlencode($row['lab_number']) . "&edit=" . $schedule_id);
+        exit();
+    } else {
+        $error_message = "Schedule not found for editing!";
+    }
+}
+
+// Handle update schedule
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_schedule'])) {
+    $schedule_id = $_POST['schedule_id'];
+    $subject_name = $_POST['purpose'];
+    $lab_number = $_POST['lab_number'];
+    $day = $_POST['day'];
+    $start_time = $_POST['start_time'];
+    $end_time = $_POST['end_time'];
+    $instructor_id = $_POST['instructor_id'];
+    
+    // Convert day to date (next occurrence of the day)
+    $today = date('Y-m-d');
+    $this_week_day = date('Y-m-d', strtotime("next {$day}", strtotime($today)));
+    
+    // Update schedule
+    $update_query = "UPDATE subjects 
+                    SET subject_name = ?, lab_number = ?, date = ?, start_time = ?, end_time = ?, instructor_id = ? 
+                    WHERE id = ?";
+    $update_stmt = $conn->prepare($update_query);
+    $update_stmt->bind_param("sssssii", $subject_name, $lab_number, $this_week_day, $start_time, $end_time, $instructor_id, $schedule_id);
+    
+    if ($update_stmt->execute()) {
+        // Clear edit session data
+        unset($_SESSION['edit_schedule']);
+        
+        $success_message = "Schedule updated successfully!";
+        
+        // Redirect to clear POST and show the updated schedule
+        header("Location: lab_schedules_admin.php?lab=" . urlencode($lab_number) . "&success=" . urlencode($success_message));
+        exit();
+    } else {
+        $error_message = "Error updating schedule: " . $conn->error;
+    }
+}
+
 // Format time helper function
 function format_time($time) {
     return date('h:i A', strtotime($time));
@@ -217,6 +338,11 @@ function is_time_slot_occupied($time_slot, $day_schedule) {
         }
     }
     return ['occupied' => false];
+}
+
+// Get success message from URL parameter if it exists
+if (isset($_GET['success'])) {
+    $success_message = $_GET['success'];
 }
 ?>
 
@@ -243,6 +369,10 @@ function is_time_slot_occupied($time_slot, $day_schedule) {
         
         body {
             background-color: #f8f9fa;
+            background-image: url('ucmain.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #333;
             line-height: 1.6;
@@ -475,6 +605,44 @@ function is_time_slot_occupied($time_slot, $day_schedule) {
                 width: 100px;
             }
         }
+        
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+        
+        .btn-warning {
+            background-color: var(--warning);
+            border-color: var(--warning);
+            color: #212529;
+        }
+        
+        .btn-warning:hover {
+            background-color: #ffc107;
+            border-color: #ffc107;
+        }
+        
+        .btn-danger-outline {
+            color: var(--danger);
+            background-color: transparent;
+            border: 1px solid var(--danger);
+        }
+        
+        .btn-danger-outline:hover {
+            color: white;
+            background-color: var(--danger);
+        }
+        
+        .reset-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -532,11 +700,19 @@ function is_time_slot_occupied($time_slot, $day_schedule) {
             
             <!-- Schedule Card -->
             <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
                         <i class="fas fa-calendar-alt mr-2"></i>
                         Schedule for Laboratory <?php echo htmlspecialchars($selected_lab); ?>
                     </h5>
+                    
+                    <!-- Reset All Schedules Button -->
+                    <form method="post" onsubmit="return confirm('Are you sure you want to delete ALL schedules for Laboratory <?php echo htmlspecialchars($selected_lab); ?>? This action cannot be undone.');">
+                        <input type="hidden" name="lab_number" value="<?php echo htmlspecialchars($selected_lab); ?>">
+                        <button type="submit" name="reset_all_schedules" class="btn btn-danger-outline btn-sm">
+                            <i class="fas fa-trash-alt mr-1"></i> Reset All Schedules
+                        </button>
+                    </form>
                 </div>
                 <div class="card-body">
                     <?php
@@ -588,11 +764,17 @@ function is_time_slot_occupied($time_slot, $day_schedule) {
                                                                         <div><i class="far fa-clock mr-1"></i><?php echo format_time($class['start_time']); ?> - <?php echo format_time($class['end_time']); ?></div>
                                                                         <div><i class="fas fa-user-tie mr-1"></i><?php echo htmlspecialchars($class['instructor']); ?></div>
                                                                     </div>
-                                                                    <div>
-                                                                        <form method="post" class="delete-schedule-form">
+                                                                    <div class="action-buttons">
+                                                                        <form method="post" class="d-inline">
+                                                                            <input type="hidden" name="schedule_id" value="<?php echo $class['id']; ?>">
+                                                                            <button type="submit" name="edit_schedule" class="btn btn-sm btn-warning" title="Edit">
+                                                                                <i class="fas fa-edit"></i>
+                                                                            </button>
+                                                                        </form>
+                                                                        <form method="post" class="d-inline delete-schedule-form">
                                                                             <input type="hidden" name="schedule_id" value="<?php echo $class['id']; ?>">
                                                                             <button type="submit" name="delete_schedule" class="btn btn-sm btn-danger" 
-                                                                                    onclick="return confirm('Are you sure you want to delete this schedule?')">
+                                                                                    onclick="return confirm('Are you sure you want to delete this schedule?')" title="Delete">
                                                                                 <i class="fas fa-trash-alt"></i>
                                                                             </button>
                                                                         </form>
@@ -617,13 +799,23 @@ function is_time_slot_occupied($time_slot, $day_schedule) {
                 </div>
             </div>
             
-            <!-- Add Schedule Form Card -->
+            <!-- Add/Edit Schedule Form Card -->
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title"><i class="fas fa-plus-circle mr-2"></i>Add New Schedule</h5>
+                    <h5 class="card-title">
+                        <?php if (isset($_GET['edit']) && isset($_SESSION['edit_schedule'])): ?>
+                            <i class="fas fa-edit mr-2"></i>Edit Schedule
+                        <?php else: ?>
+                            <i class="fas fa-plus-circle mr-2"></i>Add New Schedule
+                        <?php endif; ?>
+                    </h5>
                 </div>
                 <div class="card-body">
                     <form method="post">
+                        <?php if (isset($_GET['edit']) && isset($_SESSION['edit_schedule'])): ?>
+                            <input type="hidden" name="schedule_id" value="<?php echo $_GET['edit']; ?>">
+                        <?php endif; ?>
+                        
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
@@ -632,7 +824,10 @@ function is_time_slot_occupied($time_slot, $day_schedule) {
                                     </label>
                                     <select name="purpose" id="purpose" class="form-control" required>
                                         <?php foreach ($purposes as $purpose): ?>
-                                            <option value="<?php echo htmlspecialchars($purpose); ?>">
+                                            <option value="<?php echo htmlspecialchars($purpose); ?>"
+                                                <?php if (isset($_SESSION['edit_schedule']) && $_SESSION['edit_schedule']['subject_name'] == $purpose): ?>
+                                                    selected
+                                                <?php endif; ?>>
                                                 <?php echo htmlspecialchars($purpose); ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -645,7 +840,11 @@ function is_time_slot_occupied($time_slot, $day_schedule) {
                                     <select name="lab_number" id="lab_number" class="form-control" required>
                                         <?php foreach ($labs as $lab): ?>
                                             <option value="<?php echo htmlspecialchars($lab); ?>" 
-                                                <?php echo ($lab == $selected_lab) ? 'selected' : ''; ?>>
+                                                <?php if (isset($_SESSION['edit_schedule']) && $_SESSION['edit_schedule']['lab_number'] == $lab): ?>
+                                                    selected
+                                                <?php elseif ($lab == $selected_lab): ?>
+                                                    selected
+                                                <?php endif; ?>>
                                                 <?php echo htmlspecialchars($lab); ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -657,7 +856,12 @@ function is_time_slot_occupied($time_slot, $day_schedule) {
                                     </label>
                                     <select name="day" id="day" class="form-control" required>
                                         <?php foreach ($days as $day): ?>
-                                            <option value="<?php echo $day; ?>"><?php echo $day; ?></option>
+                                            <option value="<?php echo $day; ?>"
+                                                <?php if (isset($_SESSION['edit_schedule']) && $_SESSION['edit_schedule']['day'] == $day): ?>
+                                                    selected
+                                                <?php endif; ?>>
+                                                <?php echo $day; ?>
+                                            </option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
@@ -667,13 +871,15 @@ function is_time_slot_occupied($time_slot, $day_schedule) {
                                     <label for="start_time">
                                         <i class="fas fa-hourglass-start mr-1"></i> Start Time:
                                     </label>
-                                    <input type="time" name="start_time" id="start_time" class="form-control" required>
+                                    <input type="time" name="start_time" id="start_time" class="form-control" required
+                                        value="<?php echo isset($_SESSION['edit_schedule']) ? $_SESSION['edit_schedule']['start_time'] : ''; ?>">
                                 </div>
                                 <div class="form-group">
                                     <label for="end_time">
                                         <i class="fas fa-hourglass-end mr-1"></i> End Time:
                                     </label>
-                                    <input type="time" name="end_time" id="end_time" class="form-control" required>
+                                    <input type="time" name="end_time" id="end_time" class="form-control" required
+                                        value="<?php echo isset($_SESSION['edit_schedule']) ? $_SESSION['edit_schedule']['end_time'] : ''; ?>">
                                 </div>
                                 <div class="form-group">
                                     <label for="instructor_id">
@@ -681,7 +887,10 @@ function is_time_slot_occupied($time_slot, $day_schedule) {
                                     </label>
                                     <select name="instructor_id" id="instructor_id" class="form-control" required>
                                         <?php foreach ($instructors as $instructor): ?>
-                                            <option value="<?php echo $instructor['id']; ?>">
+                                            <option value="<?php echo $instructor['id']; ?>"
+                                                <?php if (isset($_SESSION['edit_schedule']) && $_SESSION['edit_schedule']['instructor_id'] == $instructor['id']): ?>
+                                                    selected
+                                                <?php endif; ?>>
                                                 <?php echo htmlspecialchars($instructor['firstname'] . ' ' . $instructor['lastname']); ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -690,9 +899,18 @@ function is_time_slot_occupied($time_slot, $day_schedule) {
                             </div>
                         </div>
                         <div class="form-group mt-3">
-                            <button type="submit" name="add_schedule" class="btn btn-primary">
-                                <i class="fas fa-save mr-1"></i> Add Schedule
-                            </button>
+                            <?php if (isset($_GET['edit']) && isset($_SESSION['edit_schedule'])): ?>
+                                <button type="submit" name="update_schedule" class="btn btn-primary">
+                                    <i class="fas fa-save mr-1"></i> Update Schedule
+                                </button>
+                                <a href="lab_schedules_admin.php?lab=<?php echo urlencode($selected_lab); ?>" class="btn btn-secondary ml-2">
+                                    <i class="fas fa-times mr-1"></i> Cancel
+                                </a>
+                            <?php else: ?>
+                                <button type="submit" name="add_schedule" class="btn btn-primary">
+                                    <i class="fas fa-save mr-1"></i> Add Schedule
+                                </button>
+                            <?php endif; ?>
                         </div>
                     </form>
                 </div>
@@ -705,7 +923,7 @@ function is_time_slot_occupied($time_slot, $day_schedule) {
     <script>
         // Form validation
         document.addEventListener('DOMContentLoaded', function() {
-            const scheduleForm = document.querySelector('form[name="add_schedule"]');
+            const scheduleForm = document.querySelector('form[name="add_schedule"], form[name="update_schedule"]');
             
             if (scheduleForm) {
                 scheduleForm.addEventListener('submit', function(e) {

@@ -31,8 +31,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['reserve'])) {
     $lab_number = $conn->real_escape_string($_POST['lab_number']);
     $date = $conn->real_escape_string($_POST['date']);
     $time_in = $conn->real_escape_string($_POST['time_in']);
-    $pc_number = isset($_POST['selected_pc_number']) ? intval($_POST['selected_pc_number']) : null;
+    $pc_number = isset($_POST['selected_pc_number']) && !empty($_POST['selected_pc_number']) ? intval($_POST['selected_pc_number']) : null;
+    $subject_id = isset($_POST['subject_id']) && !empty($_POST['subject_id']) ? intval($_POST['subject_id']) : null;
     
+    // Validation - make sure we have all required fields
+    if (empty($purpose) || empty($lab_number) || empty($date) || empty($time_in) || empty($subject_id) || empty($pc_number)) {
+        $message = "<div class='error-message'>Please fill in all required fields including selecting a PC.</div>";
+    } else {
     // Get the student's details
     $studentSql = "SELECT firstname, lastname, course, year, remaining_sessions FROM users WHERE idno = ?";
     $studentStmt = $conn->prepare($studentSql);
@@ -65,20 +70,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['reserve'])) {
         // Format datetime for start_time
         $datetime = $date . ' ' . $time_in . ':00';
         
-        // Find the subject ID for the selected lab
-        $subjectSql = "SELECT id FROM subjects WHERE lab_number = ? LIMIT 1";
-        $subjectStmt = $conn->prepare($subjectSql);
-        $subjectStmt->bind_param("s", $lab_number);
-        $subjectStmt->execute();
-        $subjectResult = $subjectStmt->get_result();
-        $subject = $subjectResult->fetch_assoc();
-        $subject_id = $subject ? $subject['id'] : null;
-        $subjectStmt->close();
+            // Check if the PC is under maintenance
+            $checkMaintenanceSql = "SELECT pc_number FROM pc_status WHERE lab_id = ? AND pc_number = ? AND status = 'maintenance'";
+            $maintenanceStmt = $conn->prepare($checkMaintenanceSql);
+            $maintenanceStmt->bind_param("ii", $subject_id, $pc_number);
+            $maintenanceStmt->execute();
+            $maintenanceResult = $maintenanceStmt->get_result();
+            
+            if ($maintenanceResult->num_rows > 0) {
+                $message = "<div class='error-message'><strong>This PC is currently under maintenance and cannot be reserved.</strong> Please select another PC. PC under maintenance are displayed in purple and marked with a tools icon.</div>";
+                $maintenanceStmt->close();
+            } else {
+                $maintenanceStmt->close();
+                
+                // Check if the PC is already reserved in this lab
+                $checkPcSql = "SELECT id FROM sit_in_requests WHERE subject_id = ? AND pc_number = ? AND status IN ('pending', 'approved') AND (end_time IS NULL OR is_active = 1)";
+                $checkPcStmt = $conn->prepare($checkPcSql);
+                $checkPcStmt->bind_param("ii", $subject_id, $pc_number);
+                $checkPcStmt->execute();
+                $checkPcResult = $checkPcStmt->get_result();
         
-        if (!$subject_id) {
-            $message = "<div class='error-message'>Error: Could not find subject for the selected lab.</div>";
+                if ($checkPcResult->num_rows > 0) {
+                    $message = "<div class='error-message'>This PC is already reserved. Please select another PC.</div>";
+                    $checkPcStmt->close();
         } else {
-            // Create a direct sit-in request with PC number
+                    $checkPcStmt->close();
+                    
+                    // Create a sit-in request with PC number
             $insertSql = "INSERT INTO sit_in_requests (student_id, subject_id, purpose, start_time, status, lab_number, pc_number) 
                         VALUES (?, ?, ?, ?, 'pending', ?, ?)";
             $insertStmt = $conn->prepare($insertSql);
@@ -90,6 +108,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['reserve'])) {
                 $message = "<div class='error-message'>Error: " . $insertStmt->error . "</div>";
             }
             $insertStmt->close();
+                }
+            }
         }
     }
 }
@@ -154,8 +174,8 @@ $conn->close();
     <!-- Add flatpickr for better date/time picking -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <!-- Add PC selection styles -->
-    <link rel="stylesheet" href="css/pc_selection.css">
+    <!-- Add updated PC selection styles -->
+    <link rel="stylesheet" href="css/pc_selection_updated.css">
     <style>
         :root {
             --primary-color: #3498db;
@@ -580,6 +600,104 @@ $conn->close();
             10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
             20%, 40%, 60%, 80% { transform: translateX(5px); }
         }
+
+        /* Enhanced PC grid styles */
+        .pc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .pc-item {
+            width: 80px !important;
+            height: 80px !important;
+            box-sizing: border-box;
+            overflow: hidden;
+            margin: 0 auto;
+            cursor: pointer;
+            transition: all 0.3s ease !important;
+        }
+        
+        .pc-item i {
+            display: block;
+            font-size: 22px;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        
+        .pc-number {
+            display: block;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        
+        .maintenance-label {
+            display: block;
+            font-size: 9px;
+            text-align: center;
+            margin-top: 2px;
+        }
+        
+        /* Animation styles */
+        @keyframes clickEffect {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+        
+        .pc-item.click-animation {
+            animation: clickEffect 0.3s ease;
+        }
+        
+        /* FontAwesome animation class support */
+        .fa-beat {
+            animation: fa-beat 0.5s ease infinite;
+        }
+        
+        @keyframes fa-beat {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        .fa-bounce {
+            animation: fa-bounce 0.8s ease;
+        }
+        
+        @keyframes fa-bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-8px); }
+            60% { transform: translateY(-4px); }
+        }
+        
+        /* Enhanced PC selection appearance */
+        .pc-item.selected {
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.5) !important;
+            transform: scale(1.05) !important;
+            z-index: 10;
+            position: relative;
+        }
+        
+        .pc-item.available:hover {
+            transform: translateY(-4px) !important;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        .pc-selection-footer.has-selection {
+            background-color: rgba(52, 152, 219, 0.1);
+            border-left: 4px solid #3498db;
+            color: #3498db;
+            transition: all 0.3s ease;
+        }
+        
+        #displaySelectedPC {
+            font-weight: bold;
+            color: #3498db;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
@@ -760,7 +878,7 @@ $conn->close();
     &copy; <?php echo date("Y"); ?> Sit-in Monitoring System
 </footer>
 
-<script src="js/pc_selection.js"></script>
+<script src="js/pc_selection_updated.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize date picker with better UI
@@ -799,6 +917,13 @@ $conn->close();
                 document.getElementById('selected_lab_number').value = labNumber;
             }
         });
+        
+        // Manually initialize PC selection if not triggered by event
+        if (document.getElementById('subject_id') && document.getElementById('subject_id').value) {
+            if (typeof loadAvailablePCs === 'function') {
+                loadAvailablePCs(document.getElementById('subject_id').value);
+            }
+        }
     });
 </script>
 

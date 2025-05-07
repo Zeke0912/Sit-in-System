@@ -72,24 +72,30 @@ if (!empty($search)) {
                               s.lab_number LIKE '%$search%')";
 }
 
+// Status filter
+$statusFilter = isset($_GET['status']) ? $conn->real_escape_string($_GET['status']) : '';
+if (!empty($statusFilter)) {
+    $searchCondition .= " AND r.status = '$statusFilter'";
+}
+
 // Get total records count for pagination - only Today's records
 $countSql = "SELECT COUNT(*) as total FROM sit_in_requests r
              JOIN users u ON r.student_id = u.idno
              JOIN subjects s ON r.subject_id = s.id
-             WHERE r.is_active = 0 AND DATE(r.end_time) = '$today'" . $searchCondition;
+             WHERE DATE(r.start_time) = '$today'" . $searchCondition;
 $countResult = $conn->query($countSql);
 $totalRecords = $countResult->fetch_assoc()['total'];
 $totalPages = ceil($totalRecords / $entriesPerPage);
 
-// Fetch completed sit-in sessions - only Today's records
+// Fetch sit-in sessions - only Today's records (include all statuses)
 $sql = "SELECT r.id, r.student_id, r.subject_id, r.purpose, r.start_time, r.end_time, r.pc_number,
         u.firstname, u.lastname, u.course, u.year,
-        s.subject_name, s.lab_number
+        s.subject_name, s.lab_number, r.status, r.is_active
         FROM sit_in_requests r
         JOIN users u ON r.student_id = u.idno
         JOIN subjects s ON r.subject_id = s.id
-        WHERE r.is_active = 0 AND DATE(r.end_time) = '$today'" . $searchCondition . "
-        ORDER BY r.end_time DESC
+        WHERE DATE(r.start_time) = '$today'" . $searchCondition . "
+        ORDER BY r.start_time DESC
         LIMIT $offset, $entriesPerPage";
 
 $result = $conn->query($sql);
@@ -101,7 +107,7 @@ if (!$result) {
 // Get purpose statistics for pie chart - only Today's records
 $purposeStatsSql = "SELECT r.purpose, COUNT(*) as count
                     FROM sit_in_requests r
-                    WHERE r.is_active = 0 AND DATE(r.end_time) = '$today'
+                    WHERE DATE(r.start_time) = '$today'
                     GROUP BY r.purpose
                     ORDER BY count DESC";
 $purposeStatsResult = $conn->query($purposeStatsSql);
@@ -114,7 +120,7 @@ while ($row = $purposeStatsResult->fetch_assoc()) {
 $labStatsSql = "SELECT s.lab_number, COUNT(*) as count
                 FROM sit_in_requests r
                 JOIN subjects s ON r.subject_id = s.id
-                WHERE r.is_active = 0 AND DATE(r.end_time) = '$today'
+                WHERE DATE(r.start_time) = '$today'
                 GROUP BY s.lab_number
                 ORDER BY count DESC";
 $labStatsResult = $conn->query($labStatsSql);
@@ -129,7 +135,7 @@ $totalSitIns = $totalRecords;
 // Get top programming language for today
 $topPurposeSql = "SELECT purpose, COUNT(*) as count 
                 FROM sit_in_requests 
-                WHERE is_active = 0 AND DATE(end_time) = '$today'
+                WHERE DATE(start_time) = '$today'
                 GROUP BY purpose 
                 ORDER BY count DESC 
                 LIMIT 1";
@@ -140,7 +146,7 @@ $topPurpose = $topPurposeResult->num_rows > 0 ? $topPurposeResult->fetch_assoc()
 $topLabSql = "SELECT s.lab_number, COUNT(*) as count 
              FROM sit_in_requests r
              JOIN subjects s ON r.subject_id = s.id
-             WHERE r.is_active = 0 AND DATE(r.end_time) = '$today'
+             WHERE DATE(r.start_time) = '$today'
              GROUP BY s.lab_number 
              ORDER BY count DESC 
              LIMIT 1";
@@ -150,7 +156,7 @@ $topLab = $topLabResult->num_rows > 0 ? $topLabResult->fetch_assoc()['lab_number
 // Get average session duration for today
 $avgDurationSql = "SELECT AVG(TIMESTAMPDIFF(MINUTE, start_time, end_time)) as avg_duration 
                   FROM sit_in_requests 
-                  WHERE is_active = 0 AND DATE(end_time) = '$today' AND end_time IS NOT NULL";
+                  WHERE DATE(start_time) = '$today' AND end_time IS NOT NULL";
 $avgDurationResult = $conn->query($avgDurationSql);
 $avgDurationMinutes = $avgDurationResult->fetch_assoc()['avg_duration'];
 $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMinutes % 60) . 'm';
@@ -532,6 +538,18 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
             border: 1px solid #ddd;
         }
         
+        .status-control {
+            display: flex;
+            align-items: center;
+        }
+        
+        .status-control select {
+            margin: 0 5px;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
         .search-control {
             display: flex;
             align-items: center;
@@ -678,12 +696,11 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
         </div>
         <div class="nav-links">
             <a href="admin_dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-            <a href="todays_sit_in_records.php" class="active"><i class="fas fa-calendar-day"></i> Today's Records</a>
-            <a href="approved_sit_in_sessions.php"><i class="fas fa-history"></i> Sit in Records</a>
-            <a href="active_sitin.php"><i class="fas fa-user-clock"></i> Active Sit-ins</a>
+            <a href="computer_control.php"><i class="fas fa-desktop"></i> Computer Control</a>
+            <a href="manage_sit_in_requests.php"><i class="fas fa-tasks"></i> Manage Requests</a>
+            <a href="todays_sit_in_records.php" class="active"><i class="fas fa-clipboard-list"></i> Today's Records</a>
             <a href="reports.php"><i class="fas fa-chart-bar"></i> Sit-in Reports</a>
             <a href="feedback_reports.php"><i class="fas fa-comments"></i> Feedback Reports</a>
-            <a href="manage_sit_in_requests.php"><i class="fas fa-tasks"></i> Manage Requests</a>
             <a href="add_subject.php"><i class="fas fa-book"></i> Add Subject</a>
             <a href="announcements.php"><i class="fas fa-bullhorn"></i> Announcements</a>
         </div>
@@ -732,6 +749,16 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
                         <span>entries per page</span>
                     </div>
                     
+                    <div class="status-control" style="margin: 0 15px;">
+                        <label for="status-filter">Status:</label>
+                        <select id="status-filter" onchange="filterByStatus(this.value)">
+                            <option value="" <?php echo $statusFilter == '' ? 'selected' : ''; ?>>All</option>
+                            <option value="approved" <?php echo $statusFilter == 'approved' ? 'selected' : ''; ?>>Approved</option>
+                            <option value="rejected" <?php echo $statusFilter == 'rejected' ? 'selected' : ''; ?>>Rejected</option>
+                            <option value="pending" <?php echo $statusFilter == 'pending' ? 'selected' : ''; ?>>Pending</option>
+                        </select>
+                    </div>
+                    
                     <div class="search-control">
                         <label for="search">Search:</label>
                         <input type="text" id="search" value="<?php echo htmlspecialchars($search); ?>" onkeyup="if(event.keyCode === 13) searchRecords()">
@@ -750,6 +777,7 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
                             <th>PC#</th>
                             <th>Login</th>
                             <th>Logout</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -759,7 +787,21 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
                             while($row = $result->fetch_assoc()) {
                                 $fullName = $row['firstname'] . ' ' . $row['lastname'];
                                 $startTime = date('h:i:sa', strtotime($row['start_time']));
-                                $endTime = date('h:i:sa', strtotime($row['end_time']));
+                                $endTime = $row['end_time'] ? date('h:i:sa', strtotime($row['end_time'])) : 'N/A';
+                                
+                                // Format status
+                                $statusText = '';
+                                if ($row['is_active'] == 1 && $row['status'] == 'approved') {
+                                    $statusText = '<span style="color: #27ae60; font-weight: bold;">Active</span>';
+                                } elseif ($row['status'] == 'approved' && $row['is_active'] == 0) {
+                                    $statusText = '<span style="color: #3498db; font-weight: bold;">Completed</span>';
+                                } elseif ($row['status'] == 'rejected') {
+                                    $statusText = '<span style="color: #e74c3c; font-weight: bold;">Rejected</span>';
+                                } elseif ($row['status'] == 'pending') {
+                                    $statusText = '<span style="color: #f39c12; font-weight: bold;">Pending</span>';
+                                } else {
+                                    $statusText = $row['status'];
+                                }
                                 
                                 echo "<tr>
                                     <td>{$counter}</td>
@@ -770,11 +812,12 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
                                     <td>" . ($row['pc_number'] ? $row['pc_number'] : 'N/A') . "</td>
                                     <td>{$startTime}</td>
                                     <td>{$endTime}</td>
+                                    <td>{$statusText}</td>
                                 </tr>";
                                 $counter++;
                             }
                         } else {
-                            echo "<tr><td colspan='8' style='text-align:center;'>No records found for today</td></tr>";
+                            echo "<tr><td colspan='9' style='text-align:center;'>No records found for today</td></tr>";
                         }
                         ?>
                     </tbody>
@@ -789,8 +832,8 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
                     <?php if ($totalPages > 1): ?>
                     <ul class="pagination">
                         <?php if ($page > 1): ?>
-                            <li><a href="?page=1&entries=<?php echo $entriesPerPage; ?>&search=<?php echo urlencode($search); ?>">First</a></li>
-                            <li><a href="?page=<?php echo $page-1; ?>&entries=<?php echo $entriesPerPage; ?>&search=<?php echo urlencode($search); ?>">Previous</a></li>
+                            <li><a href="?page=1&entries=<?php echo $entriesPerPage; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($statusFilter); ?>">First</a></li>
+                            <li><a href="?page=<?php echo $page-1; ?>&entries=<?php echo $entriesPerPage; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($statusFilter); ?>">Previous</a></li>
                         <?php endif; ?>
                         
                         <?php
@@ -802,12 +845,12 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
                         
                         for ($i = $startPage; $i <= $endPage; $i++):
                         ?>
-                            <li><a href="?page=<?php echo $i; ?>&entries=<?php echo $entriesPerPage; ?>&search=<?php echo urlencode($search); ?>" <?php if ($i == $page) echo 'class="active"'; ?>><?php echo $i; ?></a></li>
+                            <li><a href="?page=<?php echo $i; ?>&entries=<?php echo $entriesPerPage; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($statusFilter); ?>" <?php if ($i == $page) echo 'class="active"'; ?>><?php echo $i; ?></a></li>
                         <?php endfor; ?>
                         
                         <?php if ($page < $totalPages): ?>
-                            <li><a href="?page=<?php echo $page+1; ?>&entries=<?php echo $entriesPerPage; ?>&search=<?php echo urlencode($search); ?>">Next</a></li>
-                            <li><a href="?page=<?php echo $totalPages; ?>&entries=<?php echo $entriesPerPage; ?>&search=<?php echo urlencode($search); ?>">Last</a></li>
+                            <li><a href="?page=<?php echo $page+1; ?>&entries=<?php echo $entriesPerPage; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($statusFilter); ?>">Next</a></li>
+                            <li><a href="?page=<?php echo $totalPages; ?>&entries=<?php echo $entriesPerPage; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($statusFilter); ?>">Last</a></li>
                         <?php endif; ?>
                     </ul>
                     <?php endif; ?>
@@ -959,13 +1002,18 @@ $avgDurationFormatted = floor($avgDurationMinutes / 60) . 'h ' . ($avgDurationMi
         
         // Change entries per page
         function changeEntries(entries) {
-            window.location.href = '?page=1&entries=' + entries + '&search=<?php echo urlencode($search); ?>';
+            window.location.href = '?page=1&entries=' + entries + '&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($statusFilter); ?>';
         }
         
         // Search records
         function searchRecords() {
             const searchTerm = document.getElementById('search').value;
-            window.location.href = '?page=1&entries=<?php echo $entriesPerPage; ?>&search=' + encodeURIComponent(searchTerm);
+            window.location.href = '?page=1&entries=<?php echo $entriesPerPage; ?>&search=' + encodeURIComponent(searchTerm) + '&status=<?php echo urlencode($statusFilter); ?>';
+        }
+        
+        // Filter by status
+        function filterByStatus(status) {
+            window.location.href = '?page=1&entries=<?php echo $entriesPerPage; ?>&search=<?php echo urlencode($search); ?>&status=' + encodeURIComponent(status);
         }
         
         // Animate stat cards on page load

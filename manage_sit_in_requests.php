@@ -39,19 +39,84 @@ if (isset($_POST['action']) && isset($_POST['request_id'])) {
     $request_id = $_POST['request_id'];
     $action = $_POST['action'];
 
-    if ($action == 'approve') {
-        // Update the request to 'approved' and activate the session
-        $update_sql = "UPDATE sit_in_requests SET status = 'approved', is_active = 1 WHERE id = ?";
-    } elseif ($action == 'reject') {
-        // Update the status to 'rejected'
-        $update_sql = "UPDATE sit_in_requests SET status = 'rejected' WHERE id = ?";
-    }
+    // First get request details to know which PC is involved
+    $requestSql = "SELECT subject_id, pc_number FROM sit_in_requests WHERE id = ?";
+    $requestStmt = $conn->prepare($requestSql);
+    $requestStmt->bind_param("i", $request_id);
+    $requestStmt->execute();
+    $requestResult = $requestStmt->get_result();
+    $requestData = $requestResult->fetch_assoc();
+    $requestStmt->close();
+    
+    // Only proceed if we found the request
+    if ($requestData) {
+        $subject_id = $requestData['subject_id'];
+        $pc_number = $requestData['pc_number'];
+        
+        if ($action == 'approve') {
+            // Update the request to 'approved' and activate the session
+            $update_sql = "UPDATE sit_in_requests SET status = 'approved', is_active = 1 WHERE id = ?";
+            
+            // Also update pc_status table if pc_number is set
+            if ($pc_number) {
+                // First check if pc_status table exists
+                $tableCheckSql = "SHOW TABLES LIKE 'pc_status'";
+                $tableCheckResult = $conn->query($tableCheckSql);
+                
+                if ($tableCheckResult && $tableCheckResult->num_rows > 0) {
+                    // Update or insert PC status
+                    $update_pc_status_sql = "INSERT INTO pc_status (lab_id, pc_number, status) 
+                                           VALUES (?, ?, 'occupied') 
+                                           ON DUPLICATE KEY UPDATE status = 'occupied'";
+                    $update_pc_status_stmt = $conn->prepare($update_pc_status_sql);
+                    $update_pc_status_stmt->bind_param("ii", $subject_id, $pc_number);
+                    $update_pc_status_stmt->execute();
+                    $update_pc_status_stmt->close();
+                }
+            }
+        } elseif ($action == 'reject') {
+            // Update the status to 'rejected'
+            $update_sql = "UPDATE sit_in_requests SET status = 'rejected' WHERE id = ?";
+            
+            // If request is rejected, update pc_status to vacant if it was previously reserved
+            if ($pc_number) {
+                // First check if pc_status table exists
+                $tableCheckSql = "SHOW TABLES LIKE 'pc_status'";
+                $tableCheckResult = $conn->query($tableCheckSql);
+                
+                if ($tableCheckResult && $tableCheckResult->num_rows > 0) {
+                    // Check current status
+                    $check_status_sql = "SELECT status FROM pc_status WHERE lab_id = ? AND pc_number = ?";
+                    $check_status_stmt = $conn->prepare($check_status_sql);
+                    $check_status_stmt->bind_param("ii", $subject_id, $pc_number);
+                    $check_status_stmt->execute();
+                    $status_result = $check_status_stmt->get_result();
+                    
+                    if ($status_result->num_rows > 0) {
+                        $status_data = $status_result->fetch_assoc();
+                        
+                        // Only update if current status is 'reserved'
+                        if ($status_data['status'] === 'reserved') {
+                            $update_pc_status_sql = "UPDATE pc_status SET status = 'vacant' 
+                                                   WHERE lab_id = ? AND pc_number = ?";
+                            $update_pc_status_stmt = $conn->prepare($update_pc_status_sql);
+                            $update_pc_status_stmt->bind_param("ii", $subject_id, $pc_number);
+                            $update_pc_status_stmt->execute();
+                            $update_pc_status_stmt->close();
+                        }
+                    }
+                    
+                    $check_status_stmt->close();
+                }
+            }
+        }
 
-    // Prepare and execute the update query
-    if ($stmt = $conn->prepare($update_sql)) {
-        $stmt->bind_param("i", $request_id);  // 'i' for integer type
-        $stmt->execute();
-        $stmt->close();
+        // Prepare and execute the update query
+        if ($stmt = $conn->prepare($update_sql)) {
+            $stmt->bind_param("i", $request_id);  // 'i' for integer type
+            $stmt->execute();
+            $stmt->close();
+        }
     }
 
     // Redirect back to this page after performing the action
@@ -429,11 +494,11 @@ $conn->close();
         </div>
         <div class="nav-links">
             <a href="admin_dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="computer_control.php"><i class="fas fa-desktop"></i> Computer Control</a>
             <a href="manage_sit_in_requests.php" class="active"><i class="fas fa-tasks"></i> Manage Requests</a>
-            <a href="todays_sit_in_records.php"><i class="fas fa-calendar-day"></i> Today's Records</a>
-            <a href="approved_sit_in_sessions.php"><i class="fas fa-history"></i> Sit in Records</a>
-            <a href="active_sitin.php"><i class="fas fa-user-clock"></i> Active Sit-ins</a>
+            <a href="todays_sit_in_records.php"><i class="fas fa-clipboard-list"></i> Today's Records</a>
             <a href="reports.php"><i class="fas fa-chart-bar"></i> Sit-in Reports</a>
+            <a href="feedback_reports.php"><i class="fas fa-comments"></i> Feedback Reports</a>
             <a href="add_subject.php"><i class="fas fa-book"></i> Add Subject</a>
             <a href="announcements.php"><i class="fas fa-bullhorn"></i> Announcements</a>
             <a href="upload_lab_schedules.php"><i class="fas fa-calendar-alt"></i> Lab Schedules</a>

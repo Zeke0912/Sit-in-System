@@ -44,11 +44,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_feedback'])) {
 // Get sit-in records for current user
 $student_id = $_SESSION['user_id'];
 $sql = "SELECT r.id, r.subject_id, r.purpose, r.start_time, r.end_time, r.status, 
-        r.feedback, s.subject_name, s.lab_number
+        r.feedback, s.subject_name, s.lab_number, r.is_active
         FROM sit_in_requests r
         JOIN subjects s ON r.subject_id = s.id
-        WHERE r.student_id = ? AND r.is_active = 0
-        ORDER BY r.end_time DESC";
+        WHERE r.student_id = ?
+        ORDER BY r.start_time DESC";
 
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $student_id);
@@ -426,24 +426,44 @@ $result = $stmt->get_result();
                         <td><?php echo $counter++; ?></td>
                         <td><?php echo htmlspecialchars($row['purpose']); ?></td>
                         <td><?php echo htmlspecialchars($row['lab_number']); ?></td>
-                        <td><?php echo !empty($row['end_time']) ? date('Y-m-d', strtotime($row['end_time'])) : 'N/A'; ?></td>
+                        <td><?php echo !empty($row['end_time']) ? date('Y-m-d', strtotime($row['end_time'])) : date('Y-m-d', strtotime($row['start_time'])); ?></td>
                         <td><?php 
-                            if (!empty($row['start_time']) && !empty($row['end_time'])) {
-                                echo date('H:i:s', strtotime($row['start_time'])) . ' - ' . date('H:i:s', strtotime($row['end_time']));
+                            if (!empty($row['start_time'])) {
+                                echo date('H:i:s', strtotime($row['start_time']));
+                                if (!empty($row['end_time'])) {
+                                    echo ' - ' . date('H:i:s', strtotime($row['end_time']));
+                                }
                             } else {
                                 echo 'N/A';
                             }
                         ?></td>
-                        <td><?php echo htmlspecialchars($row['status']); ?></td>
                         <td>
-                            <?php if (!empty($row['feedback']) && $row['feedback'] != "Looking forward to the session!"): ?>
+                            <?php 
+                            // Format status with colors
+                            if ($row['is_active'] == 1 && $row['status'] == 'approved') {
+                                echo '<span style="color: #27ae60; font-weight: bold;">Active</span>';
+                            } elseif ($row['status'] == 'approved' && $row['is_active'] == 0) {
+                                echo '<span style="color: #3498db; font-weight: bold;">Completed</span>';
+                            } elseif ($row['status'] == 'rejected') {
+                                echo '<span style="color: #e74c3c; font-weight: bold;">Rejected</span>';
+                            } elseif ($row['status'] == 'pending') {
+                                echo '<span style="color: #f39c12; font-weight: bold;">Pending</span>';
+                            } else {
+                                echo htmlspecialchars($row['status']);
+                            }
+                            ?>
+                        </td>
+                        <td>
+                            <?php if ($row['status'] == 'approved' && !empty($row['feedback']) && $row['feedback'] != "Looking forward to the session!"): ?>
                                 <?php 
                                 // Extract and display just the feedback content (without extra styling)
                                 $feedback = $row['feedback'];
                                 echo htmlspecialchars($feedback);
                                 ?>
-                            <?php else: ?>
+                            <?php elseif ($row['status'] == 'approved' && $row['is_active'] == 0): ?>
                                 <button class="feedback-btn" onclick="openFeedbackModal(<?php echo $row['id']; ?>)">Provide Feedback</button>
+                            <?php else: ?>
+                                <span style="color: #7f8c8d;">N/A</span>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -452,7 +472,7 @@ $result = $stmt->get_result();
             </table>
         <?php else: ?>
             <div class="no-records">
-                <p>You don't have any completed sit-in sessions yet.</p>
+                <p>You don't have any sit-in requests yet.</p>
             </div>
         <?php endif; ?>
     </div>
